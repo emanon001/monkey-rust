@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum Token {
     Illegal(String),
-    Eof,
+    EOF,
 
     Ident(String),
     Int(String),
@@ -10,10 +10,10 @@ pub enum Token {
     Plus,
     Comma,
     Semicolon,
-    Lparen,
-    Rparen,
-    Lbrace,
-    Rbrace,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
 
     Function,
     Let,

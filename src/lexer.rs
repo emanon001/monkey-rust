@@ -25,12 +25,12 @@ impl Lexer {
         let token = match self.ch {
             Some('=') => Token::Assign,
             Some(';') => Token::Semicolon,
-            Some('(') => Token::Lparen,
-            Some(')') => Token::Rparen,
+            Some('(') => Token::LParen,
+            Some(')') => Token::RParen,
             Some(',') => Token::Comma,
             Some('+') => Token::Plus,
-            Some('{') => Token::Lbrace,
-            Some('}') => Token::Rbrace,
+            Some('{') => Token::LBrace,
+            Some('}') => Token::RBrace,
             Some(ch) => {
                 if Self::is_letter(ch) {
                     // already read next char
@@ -42,7 +42,7 @@ impl Lexer {
                     Token::Illegal(format!("{}", ch))
                 }
             }
-            None => Token::Eof,
+            None => Token::EOF,
         };
         self.read_char();
         token
@@ -112,7 +112,7 @@ impl Iterator for Lexer {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next_token() {
-            Token::Eof => None,
+            Token::EOF => None,
             tok => Some(tok),
         }
     }
@@ -149,27 +149,27 @@ let result = add(five, ten);
         assert_eq!(iter.next(), Some(Token::Ident("add".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
         assert_eq!(iter.next(), Some(Token::Function));
-        assert_eq!(iter.next(), Some(Token::Lparen));
+        assert_eq!(iter.next(), Some(Token::LParen));
         assert_eq!(iter.next(), Some(Token::Ident("x".into())));
         assert_eq!(iter.next(), Some(Token::Comma));
         assert_eq!(iter.next(), Some(Token::Ident("y".into())));
-        assert_eq!(iter.next(), Some(Token::Rparen));
-        assert_eq!(iter.next(), Some(Token::Lbrace));
+        assert_eq!(iter.next(), Some(Token::RParen));
+        assert_eq!(iter.next(), Some(Token::LBrace));
         assert_eq!(iter.next(), Some(Token::Ident("x".into())));
         assert_eq!(iter.next(), Some(Token::Plus));
         assert_eq!(iter.next(), Some(Token::Ident("y".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
-        assert_eq!(iter.next(), Some(Token::Rbrace));
+        assert_eq!(iter.next(), Some(Token::RBrace));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::Let));
         assert_eq!(iter.next(), Some(Token::Ident("result".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
         assert_eq!(iter.next(), Some(Token::Ident("add".into())));
-        assert_eq!(iter.next(), Some(Token::Lparen));
+        assert_eq!(iter.next(), Some(Token::LParen));
         assert_eq!(iter.next(), Some(Token::Ident("five".into())));
         assert_eq!(iter.next(), Some(Token::Comma));
         assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
-        assert_eq!(iter.next(), Some(Token::Rparen));
+        assert_eq!(iter.next(), Some(Token::RParen));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
     }
