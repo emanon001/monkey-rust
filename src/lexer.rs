@@ -52,7 +52,7 @@ impl Lexer {
             Some(ch) => {
                 if Self::is_letter(ch) {
                     // already read next char
-                    return Self::new_indent_token(self.read_identifier());
+                    return Self::new_identifier_token(self.read_identifier());
                 } else if Self::is_digit(ch) {
                     // already read next char
                     return Token::Int(self.read_number());
@@ -119,7 +119,7 @@ impl Lexer {
         ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == '_'
     }
 
-    fn new_indent_token(ident: String) -> Token {
+    fn new_identifier_token(ident: String) -> Token {
         let s: &str = &ident;
         match s {
             "fn" => Token::Function,
