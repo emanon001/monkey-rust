@@ -158,23 +158,10 @@ let ten = 10;
 let add = fn(x, y) {
     x + y;
 };
-
 let result = add(five, ten);
-!-/*5;
-5 < 10 > 5;
-
-if (5 < 10) {
-    return true;
-} else {
-    return false;
-}
-
-10 == 10;
-10 != 9;
 "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
-        //
         assert_eq!(iter.next(), Some(Token::Let));
         assert_eq!(iter.next(), Some(Token::Ident("five".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
@@ -211,6 +198,14 @@ if (5 < 10) {
         assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
         assert_eq!(iter.next(), Some(Token::RParen));
         assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), None);
+
+        let input = r#"
+!-/*5;
+5 < 10 > 5;
+"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Bang));
         assert_eq!(iter.next(), Some(Token::Minus));
         assert_eq!(iter.next(), Some(Token::Slash));
@@ -223,6 +218,17 @@ if (5 < 10) {
         assert_eq!(iter.next(), Some(Token::GT));
         assert_eq!(iter.next(), Some(Token::Int("5".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), None);
+
+        let input = r#"
+if (5 < 10) {
+    return true;
+} else {
+    return false;
+}
+"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::If));
         assert_eq!(iter.next(), Some(Token::LParen));
         assert_eq!(iter.next(), Some(Token::Int("5".into())));
@@ -240,6 +246,14 @@ if (5 < 10) {
         assert_eq!(iter.next(), Some(Token::False));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::RBrace));
+        assert_eq!(iter.next(), None);
+
+        let input = r#"
+10 == 10;
+10 != 9;
+"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Int("10".into())));
         assert_eq!(iter.next(), Some(Token::Eq));
         assert_eq!(iter.next(), Some(Token::Int("10".into())));
