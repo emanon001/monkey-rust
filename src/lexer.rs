@@ -33,7 +33,11 @@ impl Lexer {
             Some('}') => Token::Rbrace,
             Some(ch) => {
                 if Self::is_letter(ch) {
-                    Self::loopup_ident(self.read_identifier())
+                    // already read next char
+                    return Self::loopup_ident(self.read_identifier());
+                } else if Self::is_digit(ch) {
+                    // already read next char
+                    return Token::Int(self.read_number());
                 } else {
                     Token::Illegal(format!("{}", ch))
                 }
@@ -64,6 +68,18 @@ impl Lexer {
             self.read_char();
         }
         let r = self.pos;
+        // [l, r)
+        self.input[l..r].into_iter().collect::<String>()
+    }
+
+    fn read_number(&mut self) -> String {
+        assert!(self.ch.is_some());
+        let l = self.pos;
+        while self.ch.filter(|&ch| Self::is_digit(ch)).is_some() {
+            self.read_char();
+        }
+        let r = self.pos;
+        // [l, r)
         self.input[l..r].into_iter().collect::<String>()
     }
 
@@ -71,6 +87,10 @@ impl Lexer {
         while self.ch.filter(|&ch| ch.is_ascii_whitespace()).is_some() {
             self.read_char();
         }
+    }
+
+    fn is_digit(ch: char) -> bool {
+        ch.is_ascii_digit()
     }
 
     fn is_letter(ch: char) -> bool {
