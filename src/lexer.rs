@@ -3,120 +3,24 @@ use crate::token::Token;
 pub struct Lexer {
     input: Vec<char>,
     pos: usize,
-    read_pos: usize,
-    ch: Option<char>,
 }
 
 impl Lexer {
     pub fn new(input: String) -> Self {
         let input = input.chars().collect::<Vec<char>>();
-        let mut lexer = Self {
-            input,
-            pos: 0,
-            read_pos: 0,
-            ch: None,
-        };
-        lexer.read_char();
-        lexer
+        Self { input, pos: 0 }
     }
 
-    fn next_token(&mut self) -> Token {
-        self.skip_whitespace();
-        let token = match self.ch {
-            Some('=') => match self.peek_char() {
-                Some('=') => {
-                    self.read_char();
-                    Token::Eq
-                }
-                _ => Token::Assign,
-            },
-            Some(';') => Token::Semicolon,
-            Some('(') => Token::LParen,
-            Some(')') => Token::RParen,
-            Some(',') => Token::Comma,
-            Some('+') => Token::Plus,
-            Some('-') => Token::Minus,
-            Some('!') => match self.peek_char() {
-                Some('=') => {
-                    self.read_char();
-                    Token::NotEq
-                }
-                _ => Token::Bang,
-            },
-            Some('/') => Token::Slash,
-            Some('*') => Token::Asterisk,
-            Some('<') => Token::LT,
-            Some('>') => Token::GT,
-            Some('{') => Token::LBrace,
-            Some('}') => Token::RBrace,
-            Some(ch) => {
-                if Self::is_letter(ch) {
-                    // already read next char
-                    return Self::new_identifier_token(self.read_identifier());
-                } else if Self::is_digit(ch) {
-                    // already read next char
-                    return Token::Int(self.read_number());
-                } else {
-                    Token::Illegal(format!("{}", ch))
-                }
-            }
-            None => Token::EOF,
-        };
-        self.read_char();
-        token
+    fn current_char(&self) -> Option<&char> {
+        self.input.get(self.pos)
     }
 
-    fn peek_char(&self) -> Option<char> {
-        if self.read_pos >= self.input.len() {
-            None
-        } else {
-            Some(self.input[self.read_pos])
-        }
-    }
-
-    fn read_char(&mut self) -> Option<char> {
-        self.ch = self.peek_char();
-        if self.ch.is_some() {
-            self.pos = self.read_pos;
-            self.read_pos += 1;
-        }
-        self.ch
-    }
-
-    fn read_identifier(&mut self) -> String {
-        assert!(self.ch.is_some());
-        let l = self.pos;
-        while self.ch.filter(|&ch| Self::is_letter(ch)).is_some() {
-            self.read_char();
-        }
-        let r = std::cmp::max(self.pos, l + 1);
-        // [l, r)
-        self.input[l..r].into_iter().collect::<String>()
-    }
-
-    fn read_number(&mut self) -> String {
-        assert!(self.ch.is_some());
-        let l = self.pos;
-        while self.ch.filter(|&ch| Self::is_digit(ch)).is_some() {
-            self.read_char();
-        }
-        let r = std::cmp::max(self.pos, l + 1);
-        // [l, r)
-        self.input[l..r].into_iter().collect::<String>()
-    }
-
-    fn skip_whitespace(&mut self) {
-        while self.ch.filter(|&ch| ch.is_ascii_whitespace()).is_some() {
-            self.read_char();
-        }
-    }
-
-    fn is_digit(ch: char) -> bool {
+    fn is_digit(ch: &char) -> bool {
         ch.is_ascii_digit()
     }
 
-    fn is_letter(ch: char) -> bool {
-        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == '_'
+    fn is_letter(ch: &char) -> bool {
+        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == &'_'
     }
 
     fn new_identifier_token(ident: String) -> Token {
@@ -130,6 +34,99 @@ impl Lexer {
             "else" => Token::Else,
             "return" => Token::Return,
             _ => Token::Identifier(ident),
+        }
+    }
+
+    fn next_token(&mut self) -> Token {
+        self.skip_whitespace();
+        let token = match self.current_char() {
+            Some('=') => match self.peek_char() {
+                Some('=') => {
+                    self.advance();
+                    Token::Eq
+                }
+                _ => Token::Assign,
+            },
+            Some(';') => Token::Semicolon,
+            Some('(') => Token::LParen,
+            Some(')') => Token::RParen,
+            Some(',') => Token::Comma,
+            Some('+') => Token::Plus,
+            Some('-') => Token::Minus,
+            Some('!') => match self.peek_char() {
+                Some('=') => {
+                    self.advance();
+                    Token::NotEq
+                }
+                _ => Token::Bang,
+            },
+            Some('/') => Token::Slash,
+            Some('*') => Token::Asterisk,
+            Some('<') => Token::LT,
+            Some('>') => Token::GT,
+            Some('{') => Token::LBrace,
+            Some('}') => Token::RBrace,
+            Some(ch) => {
+                if Self::is_letter(ch) {
+                    Self::new_identifier_token(self.read_identifier())
+                } else if Self::is_digit(ch) {
+                    Token::Int(self.read_number())
+                } else {
+                    Token::Illegal(format!("{}", ch))
+                }
+            }
+            None => Token::EOF,
+        };
+        self.advance();
+        token
+    }
+
+    // `next` is used in an Iterator
+    fn advance(&mut self) {
+        self.pos = std::cmp::min(self.pos + 1, self.input.len());
+    }
+
+    fn peek_char(&self) -> Option<&char> {
+        self.input.get(self.pos + 1)
+    }
+
+    fn read_identifier(&mut self) -> String {
+        assert!(self
+            .current_char()
+            .filter(|&ch| Self::is_letter(ch))
+            .is_some());
+
+        let l = self.pos;
+        while self.peek_char().filter(|&ch| Self::is_letter(ch)).is_some() {
+            self.advance();
+        }
+        let r = self.pos + 1;
+        // [l, r)
+        self.input[l..r].into_iter().collect::<String>()
+    }
+
+    fn read_number(&mut self) -> String {
+        assert!(self
+            .current_char()
+            .filter(|&ch| Self::is_digit(ch))
+            .is_some());
+
+        let l = self.pos;
+        while self.peek_char().filter(|&ch| Self::is_digit(ch)).is_some() {
+            self.advance();
+        }
+        let r = self.pos + 1;
+        // [l, r)
+        self.input[l..r].into_iter().collect::<String>()
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self
+            .current_char()
+            .filter(|&ch| ch.is_ascii_whitespace())
+            .is_some()
+        {
+            self.advance();
         }
     }
 }
