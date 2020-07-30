@@ -10,7 +10,7 @@ pub enum Token {
     False,
     Function,
     GT,
-    Ident(String),
+    Identifier(String),
     If,
     Illegal(String),
     Int(String),

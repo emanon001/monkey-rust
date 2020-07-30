@@ -129,7 +129,7 @@ impl Lexer {
             "if" => Token::If,
             "else" => Token::Else,
             "return" => Token::Return,
-            _ => Token::Ident(ident),
+            _ => Token::Identifier(ident),
         }
     }
 }
@@ -163,39 +163,39 @@ let result = add(five, ten);
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Let));
-        assert_eq!(iter.next(), Some(Token::Ident("five".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("five".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
         assert_eq!(iter.next(), Some(Token::Int("5".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::Let));
-        assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("ten".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
         assert_eq!(iter.next(), Some(Token::Int("10".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::Let));
-        assert_eq!(iter.next(), Some(Token::Ident("add".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("add".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
         assert_eq!(iter.next(), Some(Token::Function));
         assert_eq!(iter.next(), Some(Token::LParen));
-        assert_eq!(iter.next(), Some(Token::Ident("x".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("x".into())));
         assert_eq!(iter.next(), Some(Token::Comma));
-        assert_eq!(iter.next(), Some(Token::Ident("y".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("y".into())));
         assert_eq!(iter.next(), Some(Token::RParen));
         assert_eq!(iter.next(), Some(Token::LBrace));
-        assert_eq!(iter.next(), Some(Token::Ident("x".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("x".into())));
         assert_eq!(iter.next(), Some(Token::Plus));
-        assert_eq!(iter.next(), Some(Token::Ident("y".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("y".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::RBrace));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::Let));
-        assert_eq!(iter.next(), Some(Token::Ident("result".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("result".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
-        assert_eq!(iter.next(), Some(Token::Ident("add".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("add".into())));
         assert_eq!(iter.next(), Some(Token::LParen));
-        assert_eq!(iter.next(), Some(Token::Ident("five".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("five".into())));
         assert_eq!(iter.next(), Some(Token::Comma));
-        assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("ten".into())));
         assert_eq!(iter.next(), Some(Token::RParen));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
@@ -272,9 +272,9 @@ if (5 < 10) {
 "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
-        assert_eq!(iter.next(), Some(Token::Ident("foo".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("foo".into())));
         assert_eq!(iter.next(), Some(Token::Plus));
-        assert_eq!(iter.next(), Some(Token::Ident("bar".into())));
+        assert_eq!(iter.next(), Some(Token::Identifier("bar".into())));
         assert_eq!(iter.next(), None);
     }
 
