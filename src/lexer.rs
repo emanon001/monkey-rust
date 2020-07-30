@@ -2,33 +2,27 @@ use crate::token::Token;
 
 pub struct Lexer {
     input: Vec<char>,
-    read_position: usize,
+    pos: usize,
+    read_pos: usize,
+    ch: Option<char>,
 }
 
 impl Lexer {
     pub fn new(input: String) -> Self {
         let input = input.chars().collect::<Vec<char>>();
-        Self {
+        let mut lexer = Self {
             input,
-            read_position: 0,
-        }
-    }
-
-    fn read_char(&mut self) -> Option<char> {
-        let ch = if self.read_position >= self.input.len() {
-            None
-        } else {
-            Some(self.input[self.read_position])
+            pos: 0,
+            read_pos: 0,
+            ch: None,
         };
-        if ch.is_some() {
-            self.read_position += 1;
-        }
-        ch
+        lexer.read_char();
+        lexer
     }
 
     fn next_token(&mut self) -> Token {
-        let ch = self.read_char();
-        match ch {
+        self.skip_whitespace();
+        let token = match self.ch {
             Some('=') => Token::Assign,
             Some(';') => Token::Semicolon,
             Some('(') => Token::Lparen,
@@ -37,8 +31,58 @@ impl Lexer {
             Some('+') => Token::Plus,
             Some('{') => Token::Lbrace,
             Some('}') => Token::Rbrace,
+            Some(ch) => {
+                if Self::is_letter(ch) {
+                    Self::loopup_ident(self.read_identifier())
+                } else {
+                    Token::Illegal(format!("{}", ch))
+                }
+            }
             None => Token::Eof,
-            _ => panic!(),
+        };
+        self.read_char();
+        token
+    }
+
+    fn read_char(&mut self) -> Option<char> {
+        self.ch = if self.read_pos >= self.input.len() {
+            None
+        } else {
+            Some(self.input[self.read_pos])
+        };
+        if self.ch.is_some() {
+            self.pos = self.read_pos;
+            self.read_pos += 1;
+        }
+        self.ch
+    }
+
+    fn read_identifier(&mut self) -> String {
+        assert!(self.ch.is_some());
+        let l = self.pos;
+        while self.ch.filter(|&ch| Self::is_letter(ch)).is_some() {
+            self.read_char();
+        }
+        let r = self.pos;
+        self.input[l..r].into_iter().collect::<String>()
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.ch.filter(|&ch| ch.is_ascii_whitespace()).is_some() {
+            self.read_char();
+        }
+    }
+
+    fn is_letter(ch: char) -> bool {
+        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == '_'
+    }
+
+    fn loopup_ident(ident: String) -> Token {
+        let s: &str = &ident;
+        match s {
+            "fn" => Token::Function,
+            "let" => Token::Let,
+            _ => Token::Ident(ident),
         }
     }
 }
@@ -61,15 +105,51 @@ mod tests {
 
     #[test]
     fn parse() {
-        let lexer = Lexer::new("=+(){},;".into());
+        let input = r#"
+let five = 5;
+let ten = 10;
+let add = fn(x, y) {
+    x + y;
+};
+let result = add(five, ten);
+"#;
+        let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::Let));
+        assert_eq!(iter.next(), Some(Token::Ident("five".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
-        assert_eq!(iter.next(), Some(Token::Plus));
+        assert_eq!(iter.next(), Some(Token::Int("5".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::Let));
+        assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
+        assert_eq!(iter.next(), Some(Token::Assign));
+        assert_eq!(iter.next(), Some(Token::Int("10".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::Let));
+        assert_eq!(iter.next(), Some(Token::Ident("add".into())));
+        assert_eq!(iter.next(), Some(Token::Assign));
+        assert_eq!(iter.next(), Some(Token::Function));
         assert_eq!(iter.next(), Some(Token::Lparen));
+        assert_eq!(iter.next(), Some(Token::Ident("x".into())));
+        assert_eq!(iter.next(), Some(Token::Comma));
+        assert_eq!(iter.next(), Some(Token::Ident("y".into())));
         assert_eq!(iter.next(), Some(Token::Rparen));
         assert_eq!(iter.next(), Some(Token::Lbrace));
+        assert_eq!(iter.next(), Some(Token::Ident("x".into())));
+        assert_eq!(iter.next(), Some(Token::Plus));
+        assert_eq!(iter.next(), Some(Token::Ident("y".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::Rbrace));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::Let));
+        assert_eq!(iter.next(), Some(Token::Ident("result".into())));
+        assert_eq!(iter.next(), Some(Token::Assign));
+        assert_eq!(iter.next(), Some(Token::Ident("add".into())));
+        assert_eq!(iter.next(), Some(Token::Lparen));
+        assert_eq!(iter.next(), Some(Token::Ident("five".into())));
         assert_eq!(iter.next(), Some(Token::Comma));
+        assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
+        assert_eq!(iter.next(), Some(Token::Rparen));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
     }
