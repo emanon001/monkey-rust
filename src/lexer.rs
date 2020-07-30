@@ -23,14 +23,26 @@ impl Lexer {
     fn next_token(&mut self) -> Token {
         self.skip_whitespace();
         let token = match self.ch {
-            Some('=') => Token::Assign,
+            Some('=') => match self.peek_char() {
+                Some('=') => {
+                    self.read_char();
+                    Token::Eq
+                }
+                _ => Token::Assign,
+            },
             Some(';') => Token::Semicolon,
             Some('(') => Token::LParen,
             Some(')') => Token::RParen,
             Some(',') => Token::Comma,
             Some('+') => Token::Plus,
             Some('-') => Token::Minus,
-            Some('!') => Token::Bang,
+            Some('!') => match self.peek_char() {
+                Some('=') => {
+                    self.read_char();
+                    Token::NotEq
+                }
+                _ => Token::Bang,
+            },
             Some('/') => Token::Slash,
             Some('*') => Token::Asterisk,
             Some('<') => Token::LT,
@@ -54,12 +66,16 @@ impl Lexer {
         token
     }
 
-    fn read_char(&mut self) -> Option<char> {
-        self.ch = if self.read_pos >= self.input.len() {
+    fn peek_char(&self) -> Option<char> {
+        if self.read_pos >= self.input.len() {
             None
         } else {
             Some(self.input[self.read_pos])
-        };
+        }
+    }
+
+    fn read_char(&mut self) -> Option<char> {
+        self.ch = self.peek_char();
         if self.ch.is_some() {
             self.pos = self.read_pos;
             self.read_pos += 1;
@@ -139,7 +155,6 @@ mod tests {
         let input = r#"
 let five = 5;
 let ten = 10;
-
 let add = fn(x, y) {
     x + y;
 };
@@ -153,9 +168,13 @@ if (5 < 10) {
 } else {
     return false;
 }
+
+10 == 10;
+10 != 9;
 "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
+        //
         assert_eq!(iter.next(), Some(Token::Let));
         assert_eq!(iter.next(), Some(Token::Ident("five".into())));
         assert_eq!(iter.next(), Some(Token::Assign));
@@ -221,6 +240,14 @@ if (5 < 10) {
         assert_eq!(iter.next(), Some(Token::False));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), Some(Token::RBrace));
+        assert_eq!(iter.next(), Some(Token::Int("10".into())));
+        assert_eq!(iter.next(), Some(Token::Eq));
+        assert_eq!(iter.next(), Some(Token::Int("10".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::Int("10".into())));
+        assert_eq!(iter.next(), Some(Token::NotEq));
+        assert_eq!(iter.next(), Some(Token::Int("9".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
     }
 }
