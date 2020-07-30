@@ -89,7 +89,7 @@ impl Lexer {
         while self.ch.filter(|&ch| Self::is_letter(ch)).is_some() {
             self.read_char();
         }
-        let r = self.pos;
+        let r = std::cmp::max(self.pos, l + 1);
         // [l, r)
         self.input[l..r].into_iter().collect::<String>()
     }
@@ -100,7 +100,7 @@ impl Lexer {
         while self.ch.filter(|&ch| Self::is_digit(ch)).is_some() {
             self.read_char();
         }
-        let r = self.pos;
+        let r = std::cmp::max(self.pos, l + 1);
         // [l, r)
         self.input[l..r].into_iter().collect::<String>()
     }
@@ -262,6 +262,32 @@ if (5 < 10) {
         assert_eq!(iter.next(), Some(Token::NotEq));
         assert_eq!(iter.next(), Some(Token::Int("9".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn ident_eof() {
+        let input = r#"
+        foo + bar
+"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::Ident("foo".into())));
+        assert_eq!(iter.next(), Some(Token::Plus));
+        assert_eq!(iter.next(), Some(Token::Ident("bar".into())));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn int_eof() {
+        let input = r#"
+        1 + 2
+"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::Int("1".into())));
+        assert_eq!(iter.next(), Some(Token::Plus));
+        assert_eq!(iter.next(), Some(Token::Int("2".into())));
         assert_eq!(iter.next(), None);
     }
 }
