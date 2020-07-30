@@ -91,32 +91,26 @@ impl Lexer {
     }
 
     fn read_identifier(&mut self) -> String {
-        assert!(self
-            .current_char()
-            .filter(|&ch| Self::is_letter(ch))
-            .is_some());
-
+        let is_latter =
+            |ch: Option<&char>| -> bool { ch.filter(|&ch| Self::is_letter(ch)).is_some() };
+        assert!(is_latter(self.current_char()));
         let l = self.pos;
-        while self.peek_char().filter(|&ch| Self::is_letter(ch)).is_some() {
+        while is_latter(self.peek_char()) {
             self.advance();
         }
         let r = self.pos + 1;
-        // [l, r)
         self.input[l..r].into_iter().collect::<String>()
     }
 
     fn read_number(&mut self) -> String {
-        assert!(self
-            .current_char()
-            .filter(|&ch| Self::is_digit(ch))
-            .is_some());
-
+        let is_digit =
+            |ch: Option<&char>| -> bool { ch.filter(|&ch| Self::is_digit(ch)).is_some() };
+        assert!(is_digit(self.current_char()));
         let l = self.pos;
-        while self.peek_char().filter(|&ch| Self::is_digit(ch)).is_some() {
+        while is_digit(self.peek_char()) {
             self.advance();
         }
         let r = self.pos + 1;
-        // [l, r)
         self.input[l..r].into_iter().collect::<String>()
     }
 
