@@ -29,6 +29,12 @@ impl Lexer {
             Some(')') => Token::RParen,
             Some(',') => Token::Comma,
             Some('+') => Token::Plus,
+            Some('-') => Token::Minus,
+            Some('!') => Token::Bang,
+            Some('/') => Token::Slash,
+            Some('*') => Token::Asterisk,
+            Some('<') => Token::LT,
+            Some('>') => Token::GT,
             Some('{') => Token::LBrace,
             Some('}') => Token::RBrace,
             Some(ch) => {
@@ -132,6 +138,8 @@ let add = fn(x, y) {
     x + y;
 };
 let result = add(five, ten);
+!-/*5;
+5 < 10 > 5;
 "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
@@ -170,6 +178,18 @@ let result = add(five, ten);
         assert_eq!(iter.next(), Some(Token::Comma));
         assert_eq!(iter.next(), Some(Token::Ident("ten".into())));
         assert_eq!(iter.next(), Some(Token::RParen));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::Bang));
+        assert_eq!(iter.next(), Some(Token::Minus));
+        assert_eq!(iter.next(), Some(Token::Slash));
+        assert_eq!(iter.next(), Some(Token::Asterisk));
+        assert_eq!(iter.next(), Some(Token::Int("5".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::Int("5".into())));
+        assert_eq!(iter.next(), Some(Token::LT));
+        assert_eq!(iter.next(), Some(Token::Int("10".into())));
+        assert_eq!(iter.next(), Some(Token::GT));
+        assert_eq!(iter.next(), Some(Token::Int("5".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
     }
