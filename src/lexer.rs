@@ -40,7 +40,7 @@ impl Lexer {
             Some(ch) => {
                 if Self::is_letter(ch) {
                     // already read next char
-                    return Self::loopup_ident(self.read_identifier());
+                    return Self::new_indent_token(self.read_identifier());
                 } else if Self::is_digit(ch) {
                     // already read next char
                     return Token::Int(self.read_number());
@@ -103,11 +103,16 @@ impl Lexer {
         ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == '_'
     }
 
-    fn loopup_ident(ident: String) -> Token {
+    fn new_indent_token(ident: String) -> Token {
         let s: &str = &ident;
         match s {
             "fn" => Token::Function,
             "let" => Token::Let,
+            "true" => Token::True,
+            "false" => Token::False,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "return" => Token::Return,
             _ => Token::Ident(ident),
         }
     }
@@ -134,12 +139,20 @@ mod tests {
         let input = r#"
 let five = 5;
 let ten = 10;
+
 let add = fn(x, y) {
     x + y;
 };
+
 let result = add(five, ten);
 !-/*5;
 5 < 10 > 5;
+
+if (5 < 10) {
+    return true;
+} else {
+    return false;
+}
 "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
@@ -191,6 +204,23 @@ let result = add(five, ten);
         assert_eq!(iter.next(), Some(Token::GT));
         assert_eq!(iter.next(), Some(Token::Int("5".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::If));
+        assert_eq!(iter.next(), Some(Token::LParen));
+        assert_eq!(iter.next(), Some(Token::Int("5".into())));
+        assert_eq!(iter.next(), Some(Token::LT));
+        assert_eq!(iter.next(), Some(Token::Int("10".into())));
+        assert_eq!(iter.next(), Some(Token::RParen));
+        assert_eq!(iter.next(), Some(Token::LBrace));
+        assert_eq!(iter.next(), Some(Token::Return));
+        assert_eq!(iter.next(), Some(Token::True));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::RBrace));
+        assert_eq!(iter.next(), Some(Token::Else));
+        assert_eq!(iter.next(), Some(Token::LBrace));
+        assert_eq!(iter.next(), Some(Token::Return));
+        assert_eq!(iter.next(), Some(Token::False));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::RBrace));
         assert_eq!(iter.next(), None);
     }
 }
