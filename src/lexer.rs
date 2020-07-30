@@ -151,7 +151,7 @@ mod tests {
     use crate::token::Token;
 
     #[test]
-    fn parse() {
+    fn iter() {
         let input = r#"
 let five = 5;
 let ten = 10;
