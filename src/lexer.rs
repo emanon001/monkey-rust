@@ -37,7 +37,7 @@ impl Lexer {
         }
     }
 
-    fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
         let token = match self.current_char() {
             Some('=') => match self.peek_char() {
@@ -75,10 +75,10 @@ impl Lexer {
                     Token::Illegal(format!("{}", ch))
                 }
             }
-            None => Token::EOF,
+            None => return None,
         };
         self.advance();
-        token
+        Some(token)
     }
 
     // `next` is used in an Iterator
@@ -135,10 +135,7 @@ impl Iterator for Lexer {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.next_token() {
-            Token::EOF => None,
-            tok => Some(tok),
-        }
+        self.next_token()
     }
 }
 

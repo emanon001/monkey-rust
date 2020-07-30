@@ -4,7 +4,6 @@ pub enum Token {
     Asterisk,
     Bang,
     Comma,
-    EOF,
     Else,
     Eq,
     False,
