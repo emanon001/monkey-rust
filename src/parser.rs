@@ -78,9 +78,12 @@ impl Parser {
             t => return Err(vec![Self::new_token_error_message("Assign", t)]),
         };
 
+        self.next();
+
         // TODO: parse expr
         while self
-            .peek_token()
+            .current_token
+            .as_ref()
             .filter(|&t| t != &Token::Semicolon)
             .is_some()
         {
@@ -103,7 +106,8 @@ impl Parser {
 
         // TODO: parse expr
         while self
-            .peek_token()
+            .current_token
+            .as_ref()
             .filter(|&t| t != &Token::Semicolon)
             .is_some()
         {
