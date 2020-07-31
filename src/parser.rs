@@ -61,8 +61,8 @@ impl Parser {
         // TODO: parse expr
 
         let stmt = ast::Statement::Let {
-            ident: ast::Expression::Identifier(name),
-            expr: ast::Expression::Identifier("dummy".into()), // TODO: use parsed expr
+            ident: ast::Identifier(name),
+            expr: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
         };
 
         Some(stmt)
@@ -95,11 +95,10 @@ mod tests {
 
     fn test_let_statement(s: &ast::Statement, name: &str) {
         match s {
-            ast::Statement::Let { ident, .. } => match ident {
-                ast::Expression::Identifier(s) => {
-                    assert_eq!(s, name, "identifier not {}. got={}", name, s);
-                }
-            },
+            ast::Statement::Let { ident, .. } => {
+                let s = &ident.0;
+                assert_eq!(s, name, "identifier not {}. got={}", name, s);
+            }
         };
     }
 }

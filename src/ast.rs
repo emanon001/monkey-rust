@@ -9,12 +9,15 @@ pub struct Program {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
-    Let { ident: Expression, expr: Expression },
+    Let { ident: Identifier, expr: Expression },
 }
 
 // Expression
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
-    Identifier(String),
+    Identifier(Identifier),
 }
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Identifier(pub String);
