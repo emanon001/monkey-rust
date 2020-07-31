@@ -137,6 +137,10 @@ impl Parser {
             Some(Token::Identifier(id)) => {
                 Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
             }
+            Some(Token::Int(s)) => match s.parse::<i64>() {
+                Ok(parsed) => Ok(ast::Expression::Integer(parsed)),
+                Err(e) => Err(vec![format!("{}", e)]),
+            },
             _ => Err(vec!["not supported".into()]),
         }
     }
@@ -222,6 +226,36 @@ mod tests {
                             let expected = "foobar";
                             assert_eq!(id, expected, "identifier not {}. got={}", expected, id);
                         }
+                        _ => panic!("expression not Identifier. got={:?}", expr),
+                    },
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+            }
+            Err(errors) => {
+                panic!(errors.join("\n"));
+            }
+        }
+    }
+
+    #[test]
+    fn parse_integer_expression() {
+        let input = r#"
+        5;
+        "#
+        .into();
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+        match parser.parse_program() {
+            Ok(program) => {
+                assert_eq!(program.statements.len(), 1);
+                let s = &program.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => match expr {
+                        ast::Expression::Integer(n) => {
+                            let expected = 5;
+                            assert_eq!(*n, expected, "integer not {}. got={}", expected, n);
+                        }
+                        _ => panic!("expression not Integer. got={:?}", expr),
                     },
                     _ => panic!("statement not `<expr>`. got={:?}", s),
                 };

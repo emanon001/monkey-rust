@@ -40,12 +40,14 @@ impl fmt::Display for Statement {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expression {
     Identifier(Identifier),
+    Integer(i64),
 }
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expression::Identifier(id) => write!(f, "{}", id),
+            Expression::Integer(n) => write!(f, "{}", n),
         }
     }
 }
