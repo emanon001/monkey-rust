@@ -11,6 +11,7 @@ pub struct Program {
 pub enum Statement {
     Let { ident: Identifier, expr: Expression },
     Return(Expression),
+    Expression(Expression),
 }
 
 // Expression
