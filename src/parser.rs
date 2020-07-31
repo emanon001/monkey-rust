@@ -3,20 +3,17 @@ use crate::lexer::Lexer;
 use crate::token::Token;
 
 pub struct Parser {
-    lexer: Lexer,
+    lexer: std::iter::Peekable<Lexer>,
     current_token: Option<Token>,
-    peek_token: Option<Token>,
 }
 
 impl Parser {
     pub fn new(lexer: Lexer) -> Self {
-        let mut iter = lexer.into_iter();
+        let mut iter = lexer.into_iter().peekable();
         let current_token = iter.next();
-        let peek_token = iter.next();
         Self {
             lexer: iter,
             current_token,
-            peek_token,
         }
     }
 
@@ -39,8 +36,11 @@ impl Parser {
     }
 
     fn next(&mut self) {
-        std::mem::swap(&mut self.current_token, &mut self.peek_token);
-        self.peek_token = self.lexer.next();
+        self.current_token = self.lexer.next();
+    }
+
+    fn peek_token(&mut self) -> Option<&Token> {
+        self.lexer.peek()
     }
 
     fn parse_statement(&mut self) -> Result<Option<ast::Statement>, Vec<String>> {
@@ -55,21 +55,20 @@ impl Parser {
         // let <identifier> = <expr>;
         assert!(self.current_token == Some(Token::Let));
 
-        let name = match &self.peek_token {
+        let name = match self.peek_token() {
             Some(Token::Identifier(name)) => name.clone(),
             t => return Err(vec![Self::new_token_error_message("Identifier", t)]),
         };
 
         self.next();
-        match &self.peek_token {
+        match self.peek_token() {
             Some(Token::Assign) => {}
             t => return Err(vec![Self::new_token_error_message("Assign", t)]),
         };
 
         // TODO: parse expr
         while self
-            .peek_token
-            .as_ref()
+            .peek_token()
             .filter(|&t| t != &Token::Semicolon)
             .is_some()
         {
@@ -92,8 +91,7 @@ impl Parser {
 
         // TODO: parse expr
         while self
-            .peek_token
-            .as_ref()
+            .peek_token()
             .filter(|&t| t != &Token::Semicolon)
             .is_some()
         {
@@ -106,7 +104,7 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn new_token_error_message(expected: &str, actual: &Option<Token>) -> String {
+    fn new_token_error_message(expected: &str, actual: Option<&Token>) -> String {
         let actual = match actual {
             Some(t) => format!("{:?}", t),
             _ => "EOF".into(),
