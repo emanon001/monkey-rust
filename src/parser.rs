@@ -28,21 +28,21 @@ impl Parser {
         }
     }
 
-    pub fn parse_program(&mut self) -> Result<ast::Program, Vec<String>> {
+    pub fn parse_program(&mut self) -> Result<ast::Program, String> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
         while self.current_token.is_some() {
             match self.parse_statement() {
                 Ok(Some(stmt)) => statements.push(stmt),
                 Ok(_) => {}
-                Err(mut e) => errors.append(&mut e),
+                Err(e) => errors.push(e),
             }
             self.next();
         }
         if errors.is_empty() {
             Ok(ast::Program { statements })
         } else {
-            Err(errors)
+            Err(errors.join("\n"))
         }
     }
 
@@ -54,7 +54,7 @@ impl Parser {
         self.lexer.peek()
     }
 
-    fn parse_statement(&mut self) -> Result<Option<ast::Statement>, Vec<String>> {
+    fn parse_statement(&mut self) -> Result<Option<ast::Statement>, String> {
         match &self.current_token {
             Some(Token::Let) => self.parse_let_statement().map(|s| Some(s)),
             Some(Token::Return) => self.parse_return_statement().map(|s| Some(s)),
@@ -63,19 +63,19 @@ impl Parser {
         }
     }
 
-    fn parse_let_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
+    fn parse_let_statement(&mut self) -> Result<ast::Statement, String> {
         // let <identifier> = <expr>;
         assert!(self.current_token == Some(Token::Let));
 
         let name = match self.peek_token() {
             Some(Token::Identifier(name)) => name.clone(),
-            t => return Err(vec![Self::new_token_error_message("Identifier", t)]),
+            t => return Err(Self::new_token_error_message("Identifier", t)),
         };
 
         self.next();
         match self.peek_token() {
             Some(Token::Assign) => {}
-            t => return Err(vec![Self::new_token_error_message("Assign", t)]),
+            t => return Err(Self::new_token_error_message("Assign", t)),
         };
 
         self.next();
@@ -98,7 +98,7 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn parse_return_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
+    fn parse_return_statement(&mut self) -> Result<ast::Statement, String> {
         // return <expression>;
         assert!(self.current_token == Some(Token::Return));
 
@@ -120,7 +120,7 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn parse_expression_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
+    fn parse_expression_statement(&mut self) -> Result<ast::Statement, String> {
         // `<expression>` | `<expression>;`
         assert!(self.current_token.is_some());
 
@@ -132,16 +132,16 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, Vec<String>> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, String> {
         match &self.current_token {
             Some(Token::Identifier(id)) => {
                 Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
             }
             Some(Token::Int(s)) => match s.parse::<i64>() {
-                Ok(parsed) => Ok(ast::Expression::Integer(parsed)),
-                Err(e) => Err(vec![format!("{}", e)]),
+                Ok(n) => Ok(ast::Expression::Integer(n)),
+                Err(e) => Err(format!("{}", e)),
             },
-            _ => Err(vec!["not supported".into()]),
+            _ => Err("not supported".into()),
         }
     }
 
@@ -179,9 +179,7 @@ mod tests {
                     test_let_statement(s, expected_names[i]);
                 }
             }
-            Err(errors) => {
-                panic!(errors.join("\n"));
-            }
+            Err(e) => panic!(e),
         }
     }
 
@@ -202,9 +200,7 @@ mod tests {
                     test_return_statement(s);
                 }
             }
-            Err(errors) => {
-                panic!(errors.join("\n"));
-            }
+            Err(e) => panic!(e),
         }
     }
 
@@ -231,9 +227,7 @@ mod tests {
                     _ => panic!("statement not `<expr>`. got={:?}", s),
                 };
             }
-            Err(errors) => {
-                panic!(errors.join("\n"));
-            }
+            Err(e) => panic!(e),
         }
     }
 
@@ -260,9 +254,7 @@ mod tests {
                     _ => panic!("statement not `<expr>`. got={:?}", s),
                 };
             }
-            Err(errors) => {
-                panic!(errors.join("\n"));
-            }
+            Err(e) => panic!(e),
         }
     }
 
