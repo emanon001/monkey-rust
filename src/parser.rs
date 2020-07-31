@@ -168,7 +168,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_expression_statement() {
+    fn parse_identifier_expression() {
         let input = r#"
         foobar;
         "#
