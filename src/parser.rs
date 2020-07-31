@@ -26,7 +26,46 @@ impl Parser {
     }
 
     pub fn parse_program(&mut self) -> ast::Program {
-        panic!();
+        let mut statements = Vec::new();
+        while self.current_token.is_some() {
+            if let Some(stmt) = self.parse_statement() {
+                statements.push(stmt);
+            }
+            self.next();
+        }
+        ast::Program { statements }
+    }
+
+    fn parse_statement(&mut self) -> Option<ast::Statement> {
+        match self.current_token {
+            Some(Token::Let) => self.parse_let_statement(),
+            Some(_) => None,
+            None => None,
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> Option<ast::Statement> {
+        // let <identifier> = <expr>
+        assert!(self.current_token == Some(Token::Let));
+        let name = match &self.peek_token {
+            Some(Token::Identifier(name)) => name.clone(),
+            _ => return None,
+        };
+
+        self.next();
+        match &self.peek_token {
+            Some(Token::Assign) => {}
+            _ => return None,
+        };
+
+        // TODO: parse expr
+
+        let stmt = ast::Statement::Let {
+            ident: ast::Expression::Identifier(name),
+            expr: ast::Expression::Identifier("dummy".into()), // TODO: use parsed expr
+        };
+
+        Some(stmt)
     }
 }
 
