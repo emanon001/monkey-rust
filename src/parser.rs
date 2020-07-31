@@ -167,6 +167,18 @@ mod tests {
         }
     }
 
+    #[test]
+    fn display() {
+        let program = ast::Program {
+            statements: vec![ast::Statement::Let {
+                ident: ast::Identifier("my_var".into()),
+                expr: ast::Expression::Identifier(ast::Identifier("another_var".into())),
+            }],
+        };
+        let source = format!("{}", program);
+        assert_eq!(source, "let my_var = another_var;\n".to_string());
+    }
+
     fn test_let_statement(s: &ast::Statement, name: &str) {
         match s {
             ast::Statement::Let { ident, .. } => {
