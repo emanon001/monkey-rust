@@ -7,6 +7,17 @@ pub struct Parser {
     current_token: Option<Token>,
 }
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone, PartialOrd)]
+pub enum Precedence {
+    Lowest,
+    Equals,
+    LessGreater,
+    Sum,
+    Product,
+    Prefix,
+    Call,
+}
+
 impl Parser {
     pub fn new(lexer: Lexer) -> Self {
         let mut iter = lexer.into_iter().peekable();
@@ -47,6 +58,7 @@ impl Parser {
         match &self.current_token {
             Some(Token::Let) => self.parse_let_statement().map(|s| Some(s)),
             Some(Token::Return) => self.parse_return_statement().map(|s| Some(s)),
+            Some(_) => self.parse_expression_statement().map(|s| Some(s)),
             _ => Ok(None),
         }
     }
@@ -102,6 +114,27 @@ impl Parser {
             ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
         );
         Ok(stmt)
+    }
+
+    fn parse_expression_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
+        // `<expression>` | `<expression>;`
+        assert!(self.current_token.is_some());
+
+        let expr = self.parse_expression(Precedence::Lowest)?;
+        if self.peek_token() == Some(&Token::Semicolon) {
+            self.next();
+        }
+        let stmt = ast::Statement::Expression(expr);
+        Ok(stmt)
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, Vec<String>> {
+        match &self.current_token {
+            Some(Token::Identifier(id)) => {
+                Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
+            }
+            _ => Err(vec!["not supported".into()]),
+        }
     }
 
     fn new_token_error_message(expected: &str, actual: Option<&Token>) -> String {
