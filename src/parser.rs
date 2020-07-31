@@ -102,10 +102,34 @@ mod tests {
         let mut parser = Parser::new(lexer);
         match parser.parse_program() {
             Ok(program) => {
+                assert_eq!(program.statements.len(), 3);
                 let expected_names = vec!["x", "y", "foobar"];
                 for i in 0..expected_names.len() {
                     let s = &program.statements[i];
                     test_let_statement(s, expected_names[i]);
+                }
+            }
+            Err(errors) => {
+                panic!(errors.join("\n"));
+            }
+        }
+    }
+
+    #[test]
+    fn return_statements() {
+        let input = r#"
+        return 5;
+        return 10;
+        return 993322;
+        "#
+        .into();
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+        match parser.parse_program() {
+            Ok(program) => {
+                assert_eq!(program.statements.len(), 3);
+                for s in &program.statements {
+                    test_return_statement(s);
                 }
             }
             Err(errors) => {
@@ -120,6 +144,14 @@ mod tests {
                 let s = &ident.0;
                 assert_eq!(s, name, "identifier not {}. got={}", name, s);
             }
+            _ => panic!("statement not `let`. got={:?}", s),
+        };
+    }
+
+    fn test_return_statement(s: &ast::Statement) {
+        match s {
+            ast::Statement::Return(_) => {}
+            _ => panic!("statement not `return`. got={:?}", s),
         };
     }
 }

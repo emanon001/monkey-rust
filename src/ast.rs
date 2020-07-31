@@ -10,6 +10,7 @@ pub struct Program {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Statement {
     Let { ident: Identifier, expr: Expression },
+    Return(Expression),
 }
 
 // Expression
