@@ -67,6 +67,14 @@ impl Parser {
         };
 
         // TODO: parse expr
+        while self
+            .peek_token
+            .as_ref()
+            .filter(|&t| t != &Token::Semicolon)
+            .is_some()
+        {
+            self.next();
+        }
 
         let stmt = ast::Statement::Let {
             ident: ast::Identifier(name),
@@ -83,6 +91,14 @@ impl Parser {
         self.next();
 
         // TODO: parse expr
+        while self
+            .peek_token
+            .as_ref()
+            .filter(|&t| t != &Token::Semicolon)
+            .is_some()
+        {
+            self.next();
+        }
 
         let stmt = ast::Statement::Return(
             ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
