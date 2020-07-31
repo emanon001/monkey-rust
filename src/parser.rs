@@ -120,7 +120,7 @@ mod tests {
     use crate::lexer::Lexer;
 
     #[test]
-    fn let_statements() {
+    fn parse_let_statements() {
         let input = r#"
         let x = 5;
         let y = 10;
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn return_statements() {
+    fn parse_return_statements() {
         let input = r#"
         return 5;
         return 10;
