@@ -46,12 +46,13 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Option<ast::Statement>, Vec<String>> {
         match &self.current_token {
             Some(Token::Let) => self.parse_let_statement().map(|s| Some(s)),
+            Some(Token::Return) => self.parse_return_statement().map(|s| Some(s)),
             _ => Ok(None),
         }
     }
 
     fn parse_let_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
-        // let <identifier> = <expr>
+        // let <identifier> = <expr>;
         assert!(self.current_token == Some(Token::Let));
 
         let name = match &self.peek_token {
@@ -72,6 +73,20 @@ impl Parser {
             expr: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
         };
 
+        Ok(stmt)
+    }
+
+    fn parse_return_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
+        // return <expression>;
+        assert!(self.current_token == Some(Token::Return));
+
+        self.next();
+
+        // TODO: parse expr
+
+        let stmt = ast::Statement::Return(
+            ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
+        );
         Ok(stmt)
     }
 
