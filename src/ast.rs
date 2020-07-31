@@ -1,19 +1,14 @@
 use crate::token::Token;
 
-// traits
-
 pub trait Node {
     fn token_literal(&self) -> String;
 }
 
-pub trait Statement: Node {}
-
-pub trait Expression: Node {}
-
 // Program
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Program {
-    statements: Vec<Box<dyn Statement>>,
+    statements: Vec<Statement>,
 }
 
 impl Node for Program {
@@ -25,33 +20,44 @@ impl Node for Program {
     }
 }
 
-// LetStatement
+// Statement
 
-pub struct LetStatement {
-    token: Token,
-    name: Identifier,
-    value: Box<dyn Expression>,
+#[derive(Debug, PartialEq, Eq)]
+pub enum Statement {
+    Let {
+        token: Token,
+        ident: Identifier,
+        expr: Box<Expression>,
+    },
 }
 
-impl Node for LetStatement {
+impl Node for Statement {
     fn token_literal(&self) -> String {
-        self.token.literal()
+        match self {
+            Statement::Let { token, .. } => token.literal(),
+        }
     }
 }
 
-impl Expression for LetStatement {}
+// Expression
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Expression {
+    Identifier(Identifier),
+}
+
+impl Node for Expression {
+    fn token_literal(&self) -> String {
+        match self {
+            Expression::Identifier(ident) => ident.token.literal(),
+        }
+    }
+}
 
 // Identifier
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Identifier {
-    token: Token,
-    value: String,
+    pub token: Token,
+    pub value: String,
 }
-
-impl Node for Identifier {
-    fn token_literal(&self) -> String {
-        self.token.literal()
-    }
-}
-
-impl Expression for Identifier {}
