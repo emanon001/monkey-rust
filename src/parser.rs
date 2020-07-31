@@ -168,6 +168,34 @@ mod tests {
     }
 
     #[test]
+    fn parse_expression_statement() {
+        let input = r#"
+        foobar;
+        "#
+        .into();
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+        match parser.parse_program() {
+            Ok(program) => {
+                assert_eq!(program.statements.len(), 1);
+                let s = &program.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => match expr {
+                        ast::Expression::Identifier(ast::Identifier(id)) => {
+                            let expected = "foobar";
+                            assert_eq!(id, expected, "identifier not {}. got={}", expected, id);
+                        }
+                    },
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+            }
+            Err(errors) => {
+                panic!(errors.join("\n"));
+            }
+        }
+    }
+
+    #[test]
     fn display() {
         let program = ast::Program {
             statements: vec![ast::Statement::Let {
