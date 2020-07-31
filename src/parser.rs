@@ -20,42 +20,49 @@ impl Parser {
         }
     }
 
-    pub fn next(&mut self) {
+    pub fn parse_program(&mut self) -> Result<ast::Program, Vec<String>> {
+        let mut statements = Vec::new();
+        let mut errors = Vec::new();
+        while self.current_token.is_some() {
+            match self.parse_statement() {
+                Ok(Some(stmt)) => statements.push(stmt),
+                Ok(_) => {}
+                Err(mut e) => errors.append(&mut e),
+            }
+            self.next();
+        }
+        if errors.is_empty() {
+            Ok(ast::Program { statements })
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn next(&mut self) {
         std::mem::swap(&mut self.current_token, &mut self.peek_token);
         self.peek_token = self.lexer.next();
     }
 
-    pub fn parse_program(&mut self) -> ast::Program {
-        let mut statements = Vec::new();
-        while self.current_token.is_some() {
-            if let Some(stmt) = self.parse_statement() {
-                statements.push(stmt);
-            }
-            self.next();
-        }
-        ast::Program { statements }
-    }
-
-    fn parse_statement(&mut self) -> Option<ast::Statement> {
-        match self.current_token {
-            Some(Token::Let) => self.parse_let_statement(),
-            Some(_) => None,
-            None => None,
+    fn parse_statement(&mut self) -> Result<Option<ast::Statement>, Vec<String>> {
+        match &self.current_token {
+            Some(Token::Let) => self.parse_let_statement().map(|s| Some(s)),
+            _ => Ok(None),
         }
     }
 
-    fn parse_let_statement(&mut self) -> Option<ast::Statement> {
+    fn parse_let_statement(&mut self) -> Result<ast::Statement, Vec<String>> {
         // let <identifier> = <expr>
         assert!(self.current_token == Some(Token::Let));
+
         let name = match &self.peek_token {
             Some(Token::Identifier(name)) => name.clone(),
-            _ => return None,
+            t => return Err(vec![Self::new_token_error_message("Identifier", t)]),
         };
 
         self.next();
         match &self.peek_token {
             Some(Token::Assign) => {}
-            _ => return None,
+            t => return Err(vec![Self::new_token_error_message("Assign", t)]),
         };
 
         // TODO: parse expr
@@ -65,7 +72,15 @@ impl Parser {
             expr: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
         };
 
-        Some(stmt)
+        Ok(stmt)
+    }
+
+    fn new_token_error_message(expected: &str, actual: &Option<Token>) -> String {
+        let actual = match actual {
+            Some(t) => format!("{:?}", t),
+            _ => "EOF".into(),
+        };
+        format!("expected token to be {}, got {} instead", expected, actual)
     }
 }
 
@@ -85,11 +100,17 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse_program(); // panic
-        let expected_names = vec!["x", "y", "foobar"];
-        for i in 0..expected_names.len() {
-            let s = &program.statements[i];
-            test_let_statement(s, expected_names[i]);
+        match parser.parse_program() {
+            Ok(program) => {
+                let expected_names = vec!["x", "y", "foobar"];
+                for i in 0..expected_names.len() {
+                    let s = &program.statements[i];
+                    test_let_statement(s, expected_names[i]);
+                }
+            }
+            Err(errors) => {
+                panic!(errors.join("\n"));
+            }
         }
     }
 
