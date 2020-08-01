@@ -76,13 +76,13 @@ impl Parser {
 
         let name = match self.peek_token() {
             Some(Token::Identifier(name)) => name.clone(),
-            t => return Err(Self::new_token_error_message("Identifier", t).into()),
+            t => return Err(Self::new_token_error("Identifier", t).into()),
         };
 
         self.next();
         match self.peek_token() {
             Some(Token::Assign) => {}
-            t => return Err(Self::new_token_error_message("Assign", t).into()),
+            t => return Err(Self::new_token_error("Assign", t).into()),
         };
 
         self.next();
@@ -138,16 +138,15 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
-        let token = match self.current_token() {
-            Some(t) => t,
-            None => return Err(Self::new_parse_error_message("expression", None).into()),
-        };
+        let token = self
+            .current_token()
+            .ok_or(Self::new_parse_error("expression", None))?;
         // <identifier> | <integer> | <prefix>
         let mut left = match token {
             Token::Identifier(_) => self.parse_identifier_expression(),
             Token::Int(_) => self.parse_integer_expression(),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
-            t => Err(Self::new_parse_error_message("expression", Some(t)).into()),
+            t => Err(Self::new_parse_error("expression", Some(t)).into()),
         }?;
 
         while self
@@ -175,27 +174,25 @@ impl Parser {
     }
 
     fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
-        let token = match self.current_token() {
-            Some(t) => t,
-            None => return Err(Self::new_parse_error_message("identifier", None).into()),
-        };
+        let token = self
+            .current_token()
+            .ok_or(Self::new_parse_error("identifier", None))?;
         match token {
             Token::Identifier(id) => Ok(ast::Expression::Identifier(ast::Identifier(id.clone()))),
-            t => Err(Self::new_parse_error_message("identifier", Some(t)).into()),
+            t => Err(Self::new_parse_error("identifier", Some(t)).into()),
         }
     }
 
     fn parse_integer_expression(&mut self) -> Result<ast::Expression> {
-        let token = match self.current_token() {
-            Some(t) => t,
-            None => return Err(Self::new_parse_error_message("integer", None).into()),
-        };
+        let token = self
+            .current_token()
+            .ok_or(Self::new_parse_error("integer", None))?;
         match token {
             Token::Int(s) => match s.parse::<i64>() {
                 Ok(n) => Ok(ast::Expression::Integer(n)),
-                Err(_) => Err(Self::new_parse_error_message("integer", Some(token)).into()),
+                Err(_) => Err(Self::new_parse_error("integer", Some(token)).into()),
             },
-            t => Err(Self::new_parse_error_message("integer", Some(t)).into()),
+            t => Err(Self::new_parse_error("integer", Some(t)).into()),
         }
     }
 
@@ -203,7 +200,7 @@ impl Parser {
         let operator = match self.current_token() {
             Some(Token::Bang) => ast::PrefixOperator::Bang,
             Some(Token::Minus) => ast::PrefixOperator::Minus,
-            t => return Err(Self::new_parse_error_message("prefix operator", t).into()),
+            t => return Err(Self::new_parse_error("prefix operator", t).into()),
         };
         self.next();
         let right = self.parse_expression(Precedence::Prefix)?;
@@ -223,7 +220,7 @@ impl Parser {
             Some(Token::GT) => ast::InfixOperator::GT,
             Some(Token::Eq) => ast::InfixOperator::Eq,
             Some(Token::NotEq) => ast::InfixOperator::NotEq,
-            t => return Err(Self::new_parse_error_message("infix operator", t).into()),
+            t => return Err(Self::new_parse_error("infix operator", t).into()),
         };
         let precedence = self.current_prececence();
         self.next();
@@ -253,7 +250,7 @@ impl Parser {
         }
     }
 
-    fn new_token_error_message(expected: &str, actual: Option<&Token>) -> String {
+    fn new_token_error(expected: &str, actual: Option<&Token>) -> String {
         let actual = match actual {
             Some(t) => format!("{:?}", t),
             _ => "EOF".into(),
@@ -261,7 +258,7 @@ impl Parser {
         format!("expected token to be {}, got {} instead", expected, actual)
     }
 
-    fn new_parse_error_message(expected: &str, actual: Option<&Token>) -> String {
+    fn new_parse_error(expected: &str, actual: Option<&Token>) -> String {
         let actual = match actual {
             Some(t) => format!("{:?}", t),
             _ => "EOF".into(),
