@@ -76,7 +76,7 @@ impl fmt::Display for Identifier {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PrefixOperator {
     Bang,
     Minus,
@@ -92,14 +92,14 @@ impl fmt::Display for PrefixOperator {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InfixOperator {
     Add,
     Sub,
     Mul,
     Div,
-    GT,
     LT,
+    GT,
     Eq,
     NotEq,
 }
@@ -111,8 +111,8 @@ impl fmt::Display for InfixOperator {
             InfixOperator::Sub => "-",
             InfixOperator::Mul => "*",
             InfixOperator::Div => "/",
-            InfixOperator::GT => ">",
             InfixOperator::LT => "<",
+            InfixOperator::GT => ">",
             InfixOperator::Eq => "==",
             InfixOperator::NotEq => "!=",
         };

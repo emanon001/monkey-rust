@@ -12,8 +12,8 @@ pub enum Precedence {
     Lowest,
     Equals,
     LessGreater,
-    Sum,
-    Product,
+    Sum,     // + or -
+    Product, // * or /
     Prefix,
     Call,
 }
@@ -138,17 +138,63 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
         let token = match self.current_token.as_ref() {
             Some(t) => t,
-            None => return Err("could not parse EOF as expression".into()),
+            None => return Err(Self::new_parse_error_message("expression", None).into()),
+        };
+        // <identifier> | <integer> | <prefix>
+        let mut left = match token {
+            Token::Identifier(_) => self.parse_identifier_expression(),
+            Token::Int(_) => self.parse_integer_expression(),
+            Token::Bang => self.parse_prefix_expression(),
+            Token::Minus => self.parse_prefix_expression(),
+            t => Err(Self::new_parse_error_message("expression", Some(t)).into()),
+        }?;
+
+        while self
+            .peek_token()
+            .filter(|&t| t != &Token::Semicolon)
+            .is_some()
+            && precedence < self.peek_prececence()
+        {
+            left = match self.peek_token().unwrap() {
+                Token::Plus
+                | Token::Minus
+                | Token::Asterisk
+                | Token::Slash
+                | Token::LT
+                | Token::GT
+                | Token::Eq
+                | Token::NotEq => {
+                    self.next();
+                    self.parse_infix_expression(left)?
+                }
+                _ => return Ok(left),
+            }
+        }
+        Ok(left)
+    }
+
+    fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
+        let token = match self.current_token.as_ref() {
+            Some(t) => t,
+            None => return Err(Self::new_parse_error_message("identifier", None).into()),
         };
         match token {
             Token::Identifier(id) => Ok(ast::Expression::Identifier(ast::Identifier(id.clone()))),
+            t => Err(Self::new_parse_error_message("identifier", Some(t)).into()),
+        }
+    }
+
+    fn parse_integer_expression(&mut self) -> Result<ast::Expression> {
+        let token = match self.current_token.as_ref() {
+            Some(t) => t,
+            None => return Err(Self::new_parse_error_message("integer", None).into()),
+        };
+        match token {
             Token::Int(s) => match s.parse::<i64>() {
                 Ok(n) => Ok(ast::Expression::Integer(n)),
-                Err(_) => Err(format!("could not parse {} as integer", s).into()),
+                Err(_) => Err(Self::new_parse_error_message("integer", Some(token)).into()),
             },
-            Token::Bang => self.parse_prefix_expression(),
-            Token::Minus => self.parse_prefix_expression(),
-            t => return Err(format!("could not parse {:?} as expression", t).into()),
+            t => Err(Self::new_parse_error_message("integer", Some(t)).into()),
         }
     }
 
@@ -156,8 +202,8 @@ impl Parser {
         let operator = match self.current_token.as_ref() {
             Some(Token::Bang) => ast::PrefixOperator::Bang,
             Some(Token::Minus) => ast::PrefixOperator::Minus,
-            Some(t) => return Err(format!("could not parse {:?} as expression", t).into()),
-            None => return Err("could not parse EOF as expression".into()),
+            Some(t) => return Err(format!("could not parse {:?} as prefix operator", t).into()),
+            None => return Err("could not parse EOF as prefix operator".into()),
         };
         self.next();
         let right = self.parse_expression(Precedence::Prefix)?;
@@ -167,12 +213,65 @@ impl Parser {
         })
     }
 
+    fn parse_infix_expression(&mut self, left: ast::Expression) -> Result<ast::Expression> {
+        let operator = match self.current_token.as_ref() {
+            Some(Token::Plus) => ast::InfixOperator::Add,
+            Some(Token::Minus) => ast::InfixOperator::Sub,
+            Some(Token::Asterisk) => ast::InfixOperator::Mul,
+            Some(Token::Slash) => ast::InfixOperator::Div,
+            Some(Token::LT) => ast::InfixOperator::LT,
+            Some(Token::GT) => ast::InfixOperator::GT,
+            Some(Token::Eq) => ast::InfixOperator::Eq,
+            Some(Token::NotEq) => ast::InfixOperator::NotEq,
+            Some(t) => return Err(format!("could not parse {:?} as infix operator", t).into()),
+            None => return Err("could not parse EOF as infix operator".into()),
+        };
+        let precedence = self.current_prececence();
+        self.next();
+        let right = self.parse_expression(precedence)?;
+        Ok(ast::Expression::Infix {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        })
+    }
+
+    fn current_prececence(&self) -> Precedence {
+        Self::token_precedence(self.current_token.as_ref())
+    }
+
+    fn peek_prececence(&mut self) -> Precedence {
+        Self::token_precedence(self.peek_token())
+    }
+
+    fn token_precedence(token: Option<&Token>) -> Precedence {
+        match token {
+            Some(Token::Plus) => Precedence::Sum,
+            Some(Token::Minus) => Precedence::Sum,
+            Some(Token::Asterisk) => Precedence::Product,
+            Some(Token::Slash) => Precedence::Product,
+            Some(Token::LT) => Precedence::LessGreater,
+            Some(Token::GT) => Precedence::LessGreater,
+            Some(Token::Eq) => Precedence::Equals,
+            Some(Token::NotEq) => Precedence::Equals,
+            _ => Precedence::Lowest,
+        }
+    }
+
     fn new_token_error_message(expected: &str, actual: Option<&Token>) -> String {
         let actual = match actual {
             Some(t) => format!("{:?}", t),
             _ => "EOF".into(),
         };
         format!("expected token to be {}, got {} instead", expected, actual)
+    }
+
+    fn new_parse_error_message(expected: &str, actual: Option<&Token>) -> String {
+        let actual = match actual {
+            Some(t) => format!("{:?}", t),
+            _ => "EOF".into(),
+        };
+        format!("could not parse {} as {}", actual, expected)
     }
 }
 
