@@ -146,8 +146,7 @@ impl Parser {
         let mut left = match token {
             Token::Identifier(_) => self.parse_identifier_expression(),
             Token::Int(_) => self.parse_integer_expression(),
-            Token::Bang => self.parse_prefix_expression(),
-            Token::Minus => self.parse_prefix_expression(),
+            Token::Bang | Token::Minus => self.parse_prefix_expression(),
             t => Err(Self::new_parse_error_message("expression", Some(t)).into()),
         }?;
 
@@ -248,14 +247,10 @@ impl Parser {
 
     fn token_precedence(token: Option<&Token>) -> Precedence {
         match token {
-            Some(Token::Plus) => Precedence::Sum,
-            Some(Token::Minus) => Precedence::Sum,
-            Some(Token::Asterisk) => Precedence::Product,
-            Some(Token::Slash) => Precedence::Product,
-            Some(Token::LT) => Precedence::LessGreater,
-            Some(Token::GT) => Precedence::LessGreater,
-            Some(Token::Eq) => Precedence::Equals,
-            Some(Token::NotEq) => Precedence::Equals,
+            Some(Token::Plus) | Some(Token::Minus) => Precedence::Sum,
+            Some(Token::Asterisk) | Some(Token::Slash) => Precedence::Product,
+            Some(Token::LT) | Some(Token::GT) => Precedence::LessGreater,
+            Some(Token::Eq) | Some(Token::NotEq) => Precedence::Equals,
             _ => Precedence::Lowest,
         }
     }
