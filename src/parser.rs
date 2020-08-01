@@ -30,7 +30,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_program(&mut self) -> Result<ast::Program> {
+    pub fn parse(&mut self) -> Result<ast::Program> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
         while self.current_token.is_some() {
@@ -191,7 +191,7 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse_program()?;
+        let program = parser.parse()?;
         assert_eq!(program.statements.len(), 3);
         let expected_names = vec!["x", "y", "foobar"];
         for i in 0..expected_names.len() {
@@ -211,7 +211,7 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse_program()?;
+        let program = parser.parse()?;
         assert_eq!(program.statements.len(), 3);
         for s in &program.statements {
             test_return_statement(s);
@@ -227,7 +227,7 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse_program()?;
+        let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         match s {
@@ -251,7 +251,7 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        let program = parser.parse_program()?;
+        let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         match s {
@@ -277,7 +277,7 @@ mod tests {
         for (input, op, int) in cases {
             let lexer = Lexer::new(input.into());
             let mut parser = Parser::new(lexer);
-            let program = parser.parse_program()?;
+            let program = parser.parse()?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             match s {
