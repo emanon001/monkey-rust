@@ -295,6 +295,44 @@ mod tests {
     }
 
     #[test]
+    fn parse_infix_expressions() -> Result<()> {
+        // (input, left, operator, right)
+        let cases = vec![
+            ("5 + 5;", 5, ast::InfixOperator::Add, 5),
+            ("5 - 5;", 5, ast::InfixOperator::Sub, 5),
+            ("5 * 5;", 5, ast::InfixOperator::Mul, 5),
+            ("5 / 5;", 5, ast::InfixOperator::Div, 5),
+            ("5 > 5;", 5, ast::InfixOperator::GT, 5),
+            ("5 < 5;", 5, ast::InfixOperator::LT, 5),
+            ("5 == 5;", 5, ast::InfixOperator::Eq, 5),
+            ("5 != 5;", 5, ast::InfixOperator::NotEq, 5),
+        ];
+        for (input, l, op, r) in cases {
+            let lexer = Lexer::new(input.into());
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse()?;
+            assert_eq!(program.statements.len(), 1);
+            let s = &program.statements[0];
+            match s {
+                ast::Statement::Expression(expr) => match expr {
+                    ast::Expression::Infix {
+                        left,
+                        operator,
+                        right,
+                    } => {
+                        assert_eq!(left, &Box::new(ast::Expression::Integer(l)));
+                        assert_eq!(operator, &op);
+                        assert_eq!(right, &Box::new(ast::Expression::Integer(r)));
+                    }
+                    _ => panic!("expression not infix. got={:?}", expr),
+                },
+                _ => panic!("statement not `<expr>`. got={:?}", s),
+            };
+        }
+        Ok(())
+    }
+
+    #[test]
     fn display() {
         let program = ast::Program {
             statements: vec![ast::Statement::Let {
