@@ -203,8 +203,7 @@ impl Parser {
         let operator = match self.current_token() {
             Some(Token::Bang) => ast::PrefixOperator::Bang,
             Some(Token::Minus) => ast::PrefixOperator::Minus,
-            Some(t) => return Err(format!("could not parse {:?} as prefix operator", t).into()),
-            None => return Err("could not parse EOF as prefix operator".into()),
+            t => return Err(Self::new_parse_error_message("prefix operator", t).into()),
         };
         self.next();
         let right = self.parse_expression(Precedence::Prefix)?;
@@ -224,8 +223,7 @@ impl Parser {
             Some(Token::GT) => ast::InfixOperator::GT,
             Some(Token::Eq) => ast::InfixOperator::Eq,
             Some(Token::NotEq) => ast::InfixOperator::NotEq,
-            Some(t) => return Err(format!("could not parse {:?} as infix operator", t).into()),
-            None => return Err("could not parse EOF as infix operator".into()),
+            t => return Err(Self::new_parse_error_message("infix operator", t).into()),
         };
         let precedence = self.current_prececence();
         self.next();
