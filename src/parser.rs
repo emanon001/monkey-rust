@@ -148,7 +148,7 @@ impl Parser {
             },
             Token::Bang => self.parse_prefix_expression(),
             Token::Minus => self.parse_prefix_expression(),
-            t => Err(format!("could not parse {:?} as expression", t).into()),
+            t => Err(Self::new_token_error_message("expression", Some(t)).into()),
         }
     }
 
