@@ -138,7 +138,7 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
         let token = match self.current_token.as_ref() {
             Some(t) => t,
-            t => return Err(Self::new_token_error_message("expression", t).into()),
+            None => return Err("could not parse EOF as expression".into()),
         };
         match token {
             Token::Identifier(id) => Ok(ast::Expression::Identifier(ast::Identifier(id.clone()))),
@@ -148,7 +148,7 @@ impl Parser {
             },
             Token::Bang => self.parse_prefix_expression(),
             Token::Minus => self.parse_prefix_expression(),
-            t => Err(Self::new_token_error_message("expression", Some(t)).into()),
+            t => return Err(format!("could not parse {:?} as expression", t).into()),
         }
     }
 
@@ -156,7 +156,8 @@ impl Parser {
         let operator = match self.current_token.as_ref() {
             Some(Token::Bang) => ast::PrefixOperator::Bang,
             Some(Token::Minus) => ast::PrefixOperator::Minus,
-            t => return Err(Self::new_token_error_message("prefix token", t).into()),
+            Some(t) => return Err(format!("could not parse {:?} as expression", t).into()),
+            None => return Err("could not parse EOF as expression".into()),
         };
         self.next();
         let right = self.parse_expression(Precedence::Prefix)?;
