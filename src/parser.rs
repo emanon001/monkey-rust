@@ -140,10 +140,10 @@ impl Parser {
             Some(Token::Identifier(id)) => {
                 Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
             }
-            Some(Token::Int(s)) => {
-                let n = s.parse::<i64>()?;
-                Ok(ast::Expression::Integer(n))
-            }
+            Some(Token::Int(s)) => match s.parse::<i64>() {
+                Ok(n) => Ok(ast::Expression::Integer(n)),
+                Err(_) => Err(format!("could not parse {} as integer", s).into()),
+            },
             _ => Err("not supported".into()),
         }
     }
