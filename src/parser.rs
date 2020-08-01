@@ -33,7 +33,7 @@ impl Parser {
     pub fn parse(&mut self) -> Result<ast::Program> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
-        while self.current_token.is_some() {
+        while self.current_token().is_some() {
             match self.parse_statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(e) => errors.push(format!("{}", e)),
@@ -51,6 +51,10 @@ impl Parser {
         self.current_token = self.lexer.next();
     }
 
+    fn current_token(&self) -> Option<&Token> {
+        self.current_token.as_ref()
+    }
+
     fn peek_token(&mut self) -> Option<&Token> {
         self.lexer.peek()
     }
@@ -58,7 +62,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<ast::Statement> {
         assert!(self.current_token.is_some());
 
-        match &self.current_token {
+        match self.current_token() {
             Some(Token::Let) => self.parse_let_statement(),
             Some(Token::Return) => self.parse_return_statement(),
             Some(_) => self.parse_expression_statement(),
@@ -85,8 +89,7 @@ impl Parser {
 
         // TODO: parse expr
         while self
-            .current_token
-            .as_ref()
+            .current_token()
             .filter(|&t| t != &Token::Semicolon)
             .is_some()
         {
@@ -109,8 +112,7 @@ impl Parser {
 
         // TODO: parse expr
         while self
-            .current_token
-            .as_ref()
+            .current_token()
             .filter(|&t| t != &Token::Semicolon)
             .is_some()
         {
@@ -125,7 +127,7 @@ impl Parser {
 
     fn parse_expression_statement(&mut self) -> Result<ast::Statement> {
         // `<expression>` | `<expression>;`
-        assert!(self.current_token.is_some());
+        assert!(self.current_token().is_some());
 
         let expr = self.parse_expression(Precedence::Lowest)?;
         if self.peek_token() == Some(&Token::Semicolon) {
@@ -136,7 +138,7 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
-        let token = match self.current_token.as_ref() {
+        let token = match self.current_token() {
             Some(t) => t,
             None => return Err(Self::new_parse_error_message("expression", None).into()),
         };
@@ -174,7 +176,7 @@ impl Parser {
     }
 
     fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
-        let token = match self.current_token.as_ref() {
+        let token = match self.current_token() {
             Some(t) => t,
             None => return Err(Self::new_parse_error_message("identifier", None).into()),
         };
@@ -185,7 +187,7 @@ impl Parser {
     }
 
     fn parse_integer_expression(&mut self) -> Result<ast::Expression> {
-        let token = match self.current_token.as_ref() {
+        let token = match self.current_token() {
             Some(t) => t,
             None => return Err(Self::new_parse_error_message("integer", None).into()),
         };
@@ -199,7 +201,7 @@ impl Parser {
     }
 
     fn parse_prefix_expression(&mut self) -> Result<ast::Expression> {
-        let operator = match self.current_token.as_ref() {
+        let operator = match self.current_token() {
             Some(Token::Bang) => ast::PrefixOperator::Bang,
             Some(Token::Minus) => ast::PrefixOperator::Minus,
             Some(t) => return Err(format!("could not parse {:?} as prefix operator", t).into()),
@@ -214,7 +216,7 @@ impl Parser {
     }
 
     fn parse_infix_expression(&mut self, left: ast::Expression) -> Result<ast::Expression> {
-        let operator = match self.current_token.as_ref() {
+        let operator = match self.current_token() {
             Some(Token::Plus) => ast::InfixOperator::Add,
             Some(Token::Minus) => ast::InfixOperator::Sub,
             Some(Token::Asterisk) => ast::InfixOperator::Mul,
@@ -237,7 +239,7 @@ impl Parser {
     }
 
     fn current_prececence(&self) -> Precedence {
-        Self::token_precedence(self.current_token.as_ref())
+        Self::token_precedence(self.current_token())
     }
 
     fn peek_prececence(&mut self) -> Precedence {
