@@ -45,6 +45,11 @@ pub enum Expression {
         operator: PrefixOperator,
         right: Box<Expression>,
     },
+    Infix {
+        left: Box<Expression>,
+        operator: InfixOperator,
+        right: Box<Expression>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -53,6 +58,11 @@ impl fmt::Display for Expression {
             Expression::Identifier(id) => write!(f, "{}", id),
             Expression::Integer(n) => write!(f, "{}", n),
             Expression::Prefix { operator, right } => write!(f, "({}{})", operator, right),
+            Expression::Infix {
+                left,
+                operator,
+                right,
+            } => write!(f, "({} {} {})", left, operator, right),
         }
     }
 }
@@ -77,6 +87,34 @@ impl fmt::Display for PrefixOperator {
         let s = match self {
             PrefixOperator::Bang => "!",
             PrefixOperator::Minus => "-",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum InfixOperator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    GT,
+    LT,
+    Eq,
+    NotEq,
+}
+
+impl fmt::Display for InfixOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            InfixOperator::Add => "+",
+            InfixOperator::Sub => "-",
+            InfixOperator::Mul => "*",
+            InfixOperator::Div => "/",
+            InfixOperator::GT => ">",
+            InfixOperator::LT => "<",
+            InfixOperator::Eq => "==",
+            InfixOperator::NotEq => "!=",
         };
         write!(f, "{}", s)
     }
