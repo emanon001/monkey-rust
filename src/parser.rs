@@ -136,16 +136,34 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
-        match &self.current_token {
-            Some(Token::Identifier(id)) => {
-                Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
-            }
-            Some(Token::Int(s)) => match s.parse::<i64>() {
+        let token = match self.current_token.as_ref() {
+            Some(t) => t,
+            t => return Err(Self::new_token_error_message("expression", t).into()),
+        };
+        match token {
+            Token::Identifier(id) => Ok(ast::Expression::Identifier(ast::Identifier(id.clone()))),
+            Token::Int(s) => match s.parse::<i64>() {
                 Ok(n) => Ok(ast::Expression::Integer(n)),
                 Err(_) => Err(format!("could not parse {} as integer", s).into()),
             },
-            _ => Err("not supported".into()),
+            Token::Bang => self.parse_prefix_expression(),
+            Token::Minus => self.parse_prefix_expression(),
+            t => Err(format!("could not parse {:?} as expression", t).into()),
         }
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<ast::Expression> {
+        let operator = match self.current_token.as_ref() {
+            Some(Token::Bang) => ast::PrefixOperator::Bang,
+            Some(Token::Minus) => ast::PrefixOperator::Minus,
+            t => return Err(Self::new_token_error_message("prefix token", t).into()),
+        };
+        self.next();
+        let right = self.parse_expression(Precedence::Prefix)?;
+        Ok(ast::Expression::Prefix {
+            operator,
+            right: Box::new(right),
+        })
     }
 
     fn new_token_error_message(expected: &str, actual: Option<&Token>) -> String {
@@ -228,7 +246,7 @@ mod tests {
     #[test]
     fn parse_integer_expression() -> Result<()> {
         let input = r#"
-        let 5;
+        5;
         "#
         .into();
         let lexer = Lexer::new(input);
@@ -246,6 +264,33 @@ mod tests {
             },
             _ => panic!("statement not `<expr>`. got={:?}", s),
         };
+        Ok(())
+    }
+
+    #[test]
+    fn parse_prefix_expressions() -> Result<()> {
+        // (input, operator, integer)
+        let cases = vec![
+            ("!5;", ast::PrefixOperator::Bang, 5),
+            ("-15;", ast::PrefixOperator::Minus, 15),
+        ];
+        for (input, op, int) in cases {
+            let lexer = Lexer::new(input.into());
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse_program()?;
+            assert_eq!(program.statements.len(), 1);
+            let s = &program.statements[0];
+            match s {
+                ast::Statement::Expression(expr) => match expr {
+                    ast::Expression::Prefix { operator, right } => {
+                        assert_eq!(operator, &op);
+                        assert_eq!(right, &Box::new(ast::Expression::Integer(int)));
+                    }
+                    _ => panic!("expression not prefix. got={:?}", expr),
+                },
+                _ => panic!("statement not `<expr>`. got={:?}", s),
+            };
+        }
         Ok(())
     }
 
