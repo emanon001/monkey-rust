@@ -435,6 +435,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_precedence() -> Result<()> {
+        // (input, expected)
+        let cases = vec![
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a + b - c", "((a + b) - c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b / c", "(a + (b / c))"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 > 4 != 3 < 4", "((5 > 4) != (3 < 4))"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            ),
+        ];
+        for (input, expected) in cases {
+            let lexer = Lexer::new(input.into());
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse()?;
+            let s = format!("{}", program);
+            assert_eq!(s, expected);
+        }
+        Ok(())
+    }
+
+    #[test]
     fn display() {
         let program = ast::Program {
             statements: vec![ast::Statement::Let {
@@ -443,7 +473,7 @@ mod tests {
             }],
         };
         let source = format!("{}", program);
-        assert_eq!(source, "let my_var = another_var;\n".to_string());
+        assert_eq!(source, "let my_var = another_var;".to_string());
     }
 
     fn test_let_statement(s: &ast::Statement, name: &str) {

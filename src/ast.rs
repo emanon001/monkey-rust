@@ -10,7 +10,7 @@ pub struct Program {
 impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for s in &self.statements {
-            write!(f, "{}\n", s)?
+            write!(f, "{}", s)?
         }
         Ok(())
     }
@@ -30,7 +30,7 @@ impl fmt::Display for Statement {
         match self {
             Statement::Let { ident, expr } => write!(f, "let {} = {};", ident, expr),
             Statement::Return(expr) => write!(f, "return {};", expr),
-            Statement::Expression(expr) => write!(f, "{};", expr),
+            Statement::Expression(expr) => write!(f, "{}", expr),
         }
     }
 }
