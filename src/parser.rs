@@ -18,6 +18,8 @@ pub enum Precedence {
     Call,
 }
 
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 impl Parser {
     pub fn new(lexer: Lexer) -> Self {
         let mut iter = lexer.into_iter().peekable();
@@ -28,21 +30,20 @@ impl Parser {
         }
     }
 
-    pub fn parse_program(&mut self) -> Result<ast::Program, String> {
+    pub fn parse_program(&mut self) -> Result<ast::Program> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
         while self.current_token.is_some() {
             match self.parse_statement() {
-                Ok(Some(stmt)) => statements.push(stmt),
-                Ok(_) => {}
-                Err(e) => errors.push(e),
+                Ok(stmt) => statements.push(stmt),
+                Err(e) => errors.push(format!("{}", e)),
             }
             self.next();
         }
         if errors.is_empty() {
             Ok(ast::Program { statements })
         } else {
-            Err(errors.join("\n"))
+            Err(errors.join("\n").into())
         }
     }
 
@@ -54,28 +55,30 @@ impl Parser {
         self.lexer.peek()
     }
 
-    fn parse_statement(&mut self) -> Result<Option<ast::Statement>, String> {
+    fn parse_statement(&mut self) -> Result<ast::Statement> {
+        assert!(self.current_token.is_some());
+
         match &self.current_token {
-            Some(Token::Let) => self.parse_let_statement().map(|s| Some(s)),
-            Some(Token::Return) => self.parse_return_statement().map(|s| Some(s)),
-            Some(_) => self.parse_expression_statement().map(|s| Some(s)),
-            _ => Ok(None),
+            Some(Token::Let) => self.parse_let_statement(),
+            Some(Token::Return) => self.parse_return_statement(),
+            Some(_) => self.parse_expression_statement(),
+            _ => unreachable!(),
         }
     }
 
-    fn parse_let_statement(&mut self) -> Result<ast::Statement, String> {
+    fn parse_let_statement(&mut self) -> Result<ast::Statement> {
         // let <identifier> = <expr>;
         assert!(self.current_token == Some(Token::Let));
 
         let name = match self.peek_token() {
             Some(Token::Identifier(name)) => name.clone(),
-            t => return Err(Self::new_token_error_message("Identifier", t)),
+            t => return Err(Self::new_token_error_message("Identifier", t).into()),
         };
 
         self.next();
         match self.peek_token() {
             Some(Token::Assign) => {}
-            t => return Err(Self::new_token_error_message("Assign", t)),
+            t => return Err(Self::new_token_error_message("Assign", t).into()),
         };
 
         self.next();
@@ -98,7 +101,7 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn parse_return_statement(&mut self) -> Result<ast::Statement, String> {
+    fn parse_return_statement(&mut self) -> Result<ast::Statement> {
         // return <expression>;
         assert!(self.current_token == Some(Token::Return));
 
@@ -120,7 +123,7 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn parse_expression_statement(&mut self) -> Result<ast::Statement, String> {
+    fn parse_expression_statement(&mut self) -> Result<ast::Statement> {
         // `<expression>` | `<expression>;`
         assert!(self.current_token.is_some());
 
@@ -132,15 +135,15 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression, String> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
         match &self.current_token {
             Some(Token::Identifier(id)) => {
                 Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
             }
-            Some(Token::Int(s)) => match s.parse::<i64>() {
-                Ok(n) => Ok(ast::Expression::Integer(n)),
-                Err(e) => Err(format!("{}", e)),
-            },
+            Some(Token::Int(s)) => {
+                let n = s.parse::<i64>()?;
+                Ok(ast::Expression::Integer(n))
+            }
             _ => Err("not supported".into()),
         }
     }
@@ -156,12 +159,12 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::Parser;
+    use super::{Parser, Result};
     use crate::ast::{self};
     use crate::lexer::Lexer;
 
     #[test]
-    fn parse_let_statements() {
+    fn parse_let_statements() -> Result<()> {
         let input = r#"
         let x = 5;
         let y = 10;
@@ -170,21 +173,18 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        match parser.parse_program() {
-            Ok(program) => {
-                assert_eq!(program.statements.len(), 3);
-                let expected_names = vec!["x", "y", "foobar"];
-                for i in 0..expected_names.len() {
-                    let s = &program.statements[i];
-                    test_let_statement(s, expected_names[i]);
-                }
-            }
-            Err(e) => panic!(e),
+        let program = parser.parse_program()?;
+        assert_eq!(program.statements.len(), 3);
+        let expected_names = vec!["x", "y", "foobar"];
+        for i in 0..expected_names.len() {
+            let s = &program.statements[i];
+            test_let_statement(s, expected_names[i]);
         }
+        Ok(())
     }
 
     #[test]
-    fn parse_return_statements() {
+    fn parse_return_statements() -> Result<()> {
         let input = r#"
         return 5;
         return 10;
@@ -193,69 +193,60 @@ mod tests {
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        match parser.parse_program() {
-            Ok(program) => {
-                assert_eq!(program.statements.len(), 3);
-                for s in &program.statements {
-                    test_return_statement(s);
-                }
-            }
-            Err(e) => panic!(e),
+        let program = parser.parse_program()?;
+        assert_eq!(program.statements.len(), 3);
+        for s in &program.statements {
+            test_return_statement(s);
         }
+        Ok(())
     }
 
     #[test]
-    fn parse_identifier_expression() {
+    fn parse_identifier_expression() -> Result<()> {
         let input = r#"
         foobar;
         "#
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        match parser.parse_program() {
-            Ok(program) => {
-                assert_eq!(program.statements.len(), 1);
-                let s = &program.statements[0];
-                match s {
-                    ast::Statement::Expression(expr) => match expr {
-                        ast::Expression::Identifier(ast::Identifier(id)) => {
-                            let expected = "foobar";
-                            assert_eq!(id, expected, "identifier not {}. got={}", expected, id);
-                        }
-                        _ => panic!("expression not Identifier. got={:?}", expr),
-                    },
-                    _ => panic!("statement not `<expr>`. got={:?}", s),
-                };
-            }
-            Err(e) => panic!(e),
-        }
+        let program = parser.parse_program()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        match s {
+            ast::Statement::Expression(expr) => match expr {
+                ast::Expression::Identifier(ast::Identifier(id)) => {
+                    let expected = "foobar";
+                    assert_eq!(id, expected, "identifier not {}. got={}", expected, id);
+                }
+                _ => panic!("expression not Identifier. got={:?}", expr),
+            },
+            _ => panic!("statement not `<expr>`. got={:?}", s),
+        };
+        Ok(())
     }
 
     #[test]
-    fn parse_integer_expression() {
+    fn parse_integer_expression() -> Result<()> {
         let input = r#"
-        5;
+        let 5;
         "#
         .into();
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
-        match parser.parse_program() {
-            Ok(program) => {
-                assert_eq!(program.statements.len(), 1);
-                let s = &program.statements[0];
-                match s {
-                    ast::Statement::Expression(expr) => match expr {
-                        ast::Expression::Integer(n) => {
-                            let expected = 5;
-                            assert_eq!(*n, expected, "integer not {}. got={}", expected, n);
-                        }
-                        _ => panic!("expression not Integer. got={:?}", expr),
-                    },
-                    _ => panic!("statement not `<expr>`. got={:?}", s),
-                };
-            }
-            Err(e) => panic!(e),
-        }
+        let program = parser.parse_program()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        match s {
+            ast::Statement::Expression(expr) => match expr {
+                ast::Expression::Integer(n) => {
+                    let expected = 5;
+                    assert_eq!(*n, expected, "integer not {}. got={}", expected, n);
+                }
+                _ => panic!("expression not Integer. got={:?}", expr),
+            },
+            _ => panic!("statement not `<expr>`. got={:?}", s),
+        };
+        Ok(())
     }
 
     #[test]
