@@ -44,6 +44,8 @@ impl fmt::Display for Statement {
     }
 }
 
+// Identifier
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Identifier(pub String);
 
@@ -52,6 +54,8 @@ impl fmt::Display for Identifier {
         write!(f, "{}", self.0)
     }
 }
+
+// BlockStatement
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BlockStatement {
@@ -88,9 +92,10 @@ pub enum Expression {
         consequence: BlockStatement,
         alternative: BlockStatement,
     },
-    Function {
-        parameters: Vec<Identifier>,
-        body: BlockStatement,
+    Function(FunctionExpression),
+    Call {
+        function: CallExpressionFunction,
+        arguments: Vec<Expression>,
     },
 }
 
@@ -111,13 +116,19 @@ impl fmt::Display for Expression {
                 consequence,
                 alternative,
             } => write!(f, "if {} {} else {}", condition, consequence, alternative),
-            Expression::Function { parameters, body } => {
-                let params = parameters.iter().map(|p| p.to_string()).join(", ");
-                write!(f, "fn ({}) {}", params, body)
+            Expression::Function(func) => write!(f, "{}", func),
+            Expression::Call {
+                function,
+                arguments,
+            } => {
+                let args = arguments.into_iter().join(",");
+                write!(f, "{}({})", function, args)
             }
         }
     }
 }
+
+// PrefixOperator
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PrefixOperator {
@@ -134,6 +145,8 @@ impl fmt::Display for PrefixOperator {
         write!(f, "{}", s)
     }
 }
+
+// InfixOperator
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InfixOperator {
@@ -160,5 +173,38 @@ impl fmt::Display for InfixOperator {
             InfixOperator::NotEq => "!=",
         };
         write!(f, "{}", s)
+    }
+}
+
+// FunctionExpression
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct FunctionExpression {
+    pub parameters: Vec<Identifier>,
+    pub body: BlockStatement,
+}
+
+impl fmt::Display for FunctionExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let params = self.parameters.iter().map(|p| p.to_string()).join(", ");
+        let body = &self.body;
+        write!(f, "fn ({}) {}", params, body)
+    }
+}
+
+// CallExpressionFunction
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum CallExpressionFunction {
+    Identifier(Identifier),
+    Function(FunctionExpression),
+}
+
+impl fmt::Display for CallExpressionFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CallExpressionFunction::Identifier(id) => write!(f, "{}", id),
+            CallExpressionFunction::Function(func) => write!(f, "{}", func),
+        }
     }
 }
