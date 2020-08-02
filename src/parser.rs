@@ -349,12 +349,12 @@ mod tests {
 
     #[test]
     fn parse_prefix_expressions() -> Result<()> {
-        // (input, operator, integer)
+        // (input, operator, right)
         let cases = vec![
             ("!5;", ast::PrefixOperator::Bang, 5),
             ("-15;", ast::PrefixOperator::Minus, 15),
         ];
-        for (input, op, int) in cases {
+        for (input, op, r) in cases {
             let lexer = Lexer::new(input.into());
             let mut parser = Parser::new(lexer);
             let program = parser.parse()?;
@@ -362,9 +362,8 @@ mod tests {
             let s = &program.statements[0];
             match s {
                 ast::Statement::Expression(expr) => match expr {
-                    ast::Expression::Prefix { operator, right } => {
-                        assert_eq!(operator, &op);
-                        assert_eq!(right, &Box::new(ast::Expression::Integer(int)));
+                    ast::Expression::Prefix { .. } => {
+                        test_prefix_expression(expr, op, ast::Expression::Integer(r));
                     }
                     _ => panic!("expression not prefix. got={:?}", expr),
                 },
@@ -489,6 +488,23 @@ mod tests {
                 assert_eq!(*n, num, "integer not {}. got={}", num, n);
             }
             _ => panic!("expression not Integer. got={:?}", expr),
+        }
+    }
+
+    fn test_prefix_expression(
+        expr: &ast::Expression,
+        operator: ast::PrefixOperator,
+        right: ast::Expression,
+    ) {
+        match expr {
+            ast::Expression::Prefix {
+                operator: op,
+                right: r,
+            } => {
+                assert_eq!(op, &operator);
+                assert_eq!(r, &Box::new(right));
+            }
+            _ => panic!("expression not prefix. got={:?}", expr),
         }
     }
 
