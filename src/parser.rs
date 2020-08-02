@@ -323,13 +323,7 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         match s {
-            ast::Statement::Expression(expr) => match expr {
-                ast::Expression::Identifier(ast::Identifier(id)) => {
-                    let expected = "foobar";
-                    assert_eq!(id, expected, "identifier not {}. got={}", expected, id);
-                }
-                _ => panic!("expression not Identifier. got={:?}", expr),
-            },
+            ast::Statement::Expression(expr) => test_identifier(expr, "foobar"),
             _ => panic!("statement not `<expr>`. got={:?}", s),
         };
         Ok(())
@@ -466,12 +460,11 @@ mod tests {
         assert_eq!(source, "let my_var = another_var;".to_string());
     }
 
+    // heplers
+
     fn test_let_statement(s: &ast::Statement, name: &str) {
         match s {
-            ast::Statement::Let { ident, .. } => {
-                let s = &ident.0;
-                assert_eq!(s, name, "identifier not {}. got={}", name, s);
-            }
+            ast::Statement::Let { ident, .. } => test_identifier_raw(ident, name),
             _ => panic!("statement not `let`. got={:?}", s),
         };
     }
@@ -481,5 +474,19 @@ mod tests {
             ast::Statement::Return(_) => {}
             _ => panic!("statement not `return`. got={:?}", s),
         };
+    }
+
+    fn test_identifier(s: &ast::Expression, name: &str) {
+        match s {
+            ast::Expression::Identifier(id) => {
+                test_identifier_raw(id, name);
+            }
+            _ => panic!("expression not identifier. got={:?}", s),
+        };
+    }
+
+    fn test_identifier_raw(id: &ast::Identifier, name: &str) {
+        let s = &id.0;
+        assert_eq!(s, name, "identifier not {}. got={}", s, name);
     }
 }
