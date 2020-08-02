@@ -151,7 +151,9 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
-        // <identifier> | <integer> | <prefix>
+        // <expression>
+
+        // parse prefix expression
         let mut left = match self.current_token() {
             Some(Token::Identifier(_)) => self.parse_identifier_expression(),
             Some(Token::Int(_)) => self.parse_integer_expression(),
@@ -159,9 +161,11 @@ impl Parser {
             Some(Token::True) | Some(Token::False) => self.parse_boolean_expression(),
             Some(Token::LParen) => self.parse_grouped_expression(),
             Some(Token::If) => self.parse_if_expression(),
+            Some(Token::Function) => self.parse_function_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
         }?;
 
+        // parse infix expression
         while self
             .peek_token()
             .filter(|&t| t != &Token::Semicolon)
@@ -295,17 +299,39 @@ impl Parser {
         self.expect_current_token(Token::Function)?;
         self.expect_peek_token_and_next(Token::LParen)?;
         let parameters = self.parse_function_parameters()?;
-        self.expect_peek_token_and_next(Token::RParen);
+
         // { <body> }
         self.expect_peek_token_and_next(Token::LBrace)?;
         let body = self.parse_block_statement()?;
-        self.expect_peek_token_and_next(Token::RParen)?;
 
         Ok(ast::Expression::Function { parameters, body })
     }
 
     fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
-        Err("".into())
+        // ([<arg>, ...])
+        self.expect_current_token(Token::LParen)?;
+        if self.peek_token() == Some(&Token::RParen) {
+            self.next();
+            return Ok(Vec::new());
+        }
+        self.next();
+        let mut identifiers = Vec::new();
+        let ident = match self.current_token() {
+            Some(Token::Identifier(id)) => ast::Identifier(id.clone()),
+            t => return Err(Self::new_token_error("identifier", t).into()),
+        };
+        identifiers.push(ident);
+        while self.peek_token().filter(|&t| t == &Token::Comma).is_some() {
+            self.next();
+            self.next();
+            let ident = match self.current_token() {
+                Some(Token::Identifier(id)) => ast::Identifier(id.clone()),
+                t => return Err(Self::new_token_error("identifier", t).into()),
+            };
+            identifiers.push(ident);
+        }
+        self.expect_peek_token_and_next(Token::RParen)?;
+        Ok(identifiers)
     }
 
     fn current_prececence(&self) -> Precedence {
