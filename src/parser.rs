@@ -146,6 +146,7 @@ impl Parser {
             Token::Identifier(_) => self.parse_identifier_expression(),
             Token::Int(_) => self.parse_integer_expression(),
             Token::Bang | Token::Minus => self.parse_prefix_expression(),
+            Token::True | Token::False => self.parse_boolean_expression(),
             t => Err(Self::new_parse_error("expression", Some(t)).into()),
         }?;
 
@@ -230,6 +231,17 @@ impl Parser {
             operator,
             right: Box::new(right),
         })
+    }
+
+    fn parse_boolean_expression(&mut self) -> Result<ast::Expression> {
+        let token = self
+            .current_token()
+            .ok_or(Self::new_parse_error("boolean", None))?;
+        match token {
+            Token::True => Ok(ast::Expression::Boolean(true)),
+            Token::False => Ok(ast::Expression::Boolean(false)),
+            t => Err(Self::new_parse_error("boolean", Some(t)).into()),
+        }
     }
 
     fn current_prececence(&self) -> Precedence {
@@ -351,8 +363,26 @@ mod tests {
     fn parse_prefix_expressions() -> Result<()> {
         // (input, operator, right)
         let cases = vec![
-            ("!5;", ast::PrefixOperator::Bang, 5),
-            ("-15;", ast::PrefixOperator::Minus, 15),
+            (
+                "!5;",
+                ast::PrefixOperator::Bang,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "-15;",
+                ast::PrefixOperator::Minus,
+                ast::Expression::Integer(15),
+            ),
+            (
+                "!true;",
+                ast::PrefixOperator::Bang,
+                ast::Expression::Boolean(true),
+            ),
+            (
+                "!false;",
+                ast::PrefixOperator::Bang,
+                ast::Expression::Boolean(false),
+            ),
         ];
         for (input, op, r) in cases {
             let lexer = Lexer::new(input.into());
@@ -363,7 +393,7 @@ mod tests {
             match s {
                 ast::Statement::Expression(expr) => match expr {
                     ast::Expression::Prefix { .. } => {
-                        test_prefix_expression(expr, op, ast::Expression::Integer(r));
+                        test_prefix_expression(expr, op, r);
                     }
                     _ => panic!("expression not prefix. got={:?}", expr),
                 },
@@ -377,14 +407,72 @@ mod tests {
     fn parse_infix_expressions() -> Result<()> {
         // (input, left, operator, right)
         let cases = vec![
-            ("5 + 5;", 5, ast::InfixOperator::Add, 5),
-            ("5 - 5;", 5, ast::InfixOperator::Sub, 5),
-            ("5 * 5;", 5, ast::InfixOperator::Mul, 5),
-            ("5 / 5;", 5, ast::InfixOperator::Div, 5),
-            ("5 > 5;", 5, ast::InfixOperator::GT, 5),
-            ("5 < 5;", 5, ast::InfixOperator::LT, 5),
-            ("5 == 5;", 5, ast::InfixOperator::Eq, 5),
-            ("5 != 5;", 5, ast::InfixOperator::NotEq, 5),
+            (
+                "5 + 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::Add,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 - 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::Sub,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 * 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::Mul,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 / 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::Div,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 > 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::GT,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 < 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::LT,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 == 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::Eq,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "5 != 5;",
+                ast::Expression::Integer(5),
+                ast::InfixOperator::NotEq,
+                ast::Expression::Integer(5),
+            ),
+            (
+                "true == true;",
+                ast::Expression::Boolean(true),
+                ast::InfixOperator::Eq,
+                ast::Expression::Boolean(true),
+            ),
+            (
+                "true != false;",
+                ast::Expression::Boolean(true),
+                ast::InfixOperator::NotEq,
+                ast::Expression::Boolean(false),
+            ),
+            (
+                "false == false;",
+                ast::Expression::Boolean(false),
+                ast::InfixOperator::Eq,
+                ast::Expression::Boolean(false),
+            ),
         ];
         for (input, l, op, r) in cases {
             let lexer = Lexer::new(input.into());
@@ -395,12 +483,7 @@ mod tests {
             match s {
                 ast::Statement::Expression(expr) => match expr {
                     ast::Expression::Infix { .. } => {
-                        test_infix_expression(
-                            expr,
-                            ast::Expression::Integer(l),
-                            op,
-                            ast::Expression::Integer(r),
-                        );
+                        test_infix_expression(expr, l, op, r);
                     }
                     _ => panic!("expression not infix. got={:?}", expr),
                 },
@@ -429,6 +512,10 @@ mod tests {
                 "3 + 4 * 5 == 3 * 1 + 4 * 5",
                 "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
             ),
+            ("true", "true"),
+            ("false", "false"),
+            ("3 > 5 == false", "((3 > 5) == false)"),
+            ("3 < 5 == true", "((3 < 5) == true)"),
         ];
         for (input, expected) in cases {
             let lexer = Lexer::new(input.into());
