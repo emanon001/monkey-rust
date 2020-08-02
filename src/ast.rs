@@ -23,6 +23,7 @@ pub enum Statement {
     Let { ident: Identifier, expr: Expression },
     Return(Expression),
     Expression(Expression),
+    Block(BlockStatement),
 }
 
 impl fmt::Display for Statement {
@@ -31,7 +32,31 @@ impl fmt::Display for Statement {
             Statement::Let { ident, expr } => write!(f, "let {} = {};", ident, expr),
             Statement::Return(expr) => write!(f, "return {};", expr),
             Statement::Expression(expr) => write!(f, "{}", expr),
+            Statement::Block(block) => write!(f, "{}", block),
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Identifier(pub String);
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct BlockStatement {
+    statements: Vec<Statement>,
+}
+
+impl fmt::Display for BlockStatement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for s in &self.statements {
+            write!(f, "{}", s)?
+        }
+        Ok(())
     }
 }
 
@@ -51,6 +76,11 @@ pub enum Expression {
         right: Box<Expression>,
     },
     Boolean(bool),
+    If {
+        condition: Box<Expression>,
+        consequence: BlockStatement,
+        alternative: BlockStatement,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -65,16 +95,12 @@ impl fmt::Display for Expression {
                 right,
             } => write!(f, "({} {} {})", left, operator, right),
             Expression::Boolean(b) => write!(f, "{}", b),
+            Expression::If {
+                condition,
+                consequence,
+                alternative,
+            } => write!(f, "if {} {} else {}", condition, consequence, alternative),
         }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Identifier(pub String);
-
-impl fmt::Display for Identifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
