@@ -294,6 +294,30 @@ impl Parser {
         })
     }
 
+    fn parse_function_expression(&mut self) -> Result<ast::Expression> {
+        // fn(<arguments>) { <body> }
+
+        // fn(<arguments>)
+        self.expect_current_token(Token::Function)?;
+        self.expect_peek_token(Token::LParen)?;
+        self.next();
+        let parameters = self.parse_function_parameters()?;
+        self.expect_peek_token(Token::RParen);
+        self.next();
+        // { <body> }
+        self.expect_peek_token(Token::LBrace)?;
+        self.next();
+        let body = self.parse_block_statement()?;
+        self.expect_peek_token(Token::RParen)?;
+        self.next();
+
+        Ok(ast::Expression::Function { parameters, body })
+    }
+
+    fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
+        Err("".into())
+    }
+
     fn current_prececence(&self) -> Precedence {
         Self::token_precedence(self.current_token())
     }
@@ -640,6 +664,43 @@ mod tests {
                     };
                 }
                 _ => panic!("expression not if. got={:?}", expr),
+            },
+            _ => panic!("statement not `<expr>`. got={:?}", s),
+        };
+        Ok(())
+    }
+
+    #[test]
+    fn parse_function_literal_expression() -> Result<()> {
+        let input = r#"
+        fn(x, y) { x + y; }
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        match s {
+            ast::Statement::Expression(expr) => match expr {
+                ast::Expression::Function { parameters, body } => {
+                    // parameters
+                    assert_eq!(parameters.len(), 2);
+                    test_identifier_raw(&parameters[0], "x");
+                    test_identifier_raw(&parameters[1], "y");
+                    // body
+                    assert_eq!(body.statements.len(), 1);
+                    let s = &body.statements[0];
+                    match s {
+                        ast::Statement::Expression(expr) => test_infix_expression(
+                            expr,
+                            ast::Expression::Identifier(ast::Identifier("x".into())),
+                            ast::InfixOperator::Add,
+                            ast::Expression::Identifier(ast::Identifier("y".into())),
+                        ),
+                        _ => panic!("statement not `<expr>`. got={:?}", s),
+                    };
+                }
+                _ => panic!("expression not function. got={:?}", expr),
             },
             _ => panic!("statement not `<expr>`. got={:?}", s),
         };
