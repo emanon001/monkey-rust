@@ -75,10 +75,7 @@ impl Parser {
         assert!(self.current_token == Some(Token::Let));
 
         // <identifier>
-        let name = match self.peek_token() {
-            Some(Token::Identifier(name)) => name.clone(),
-            t => return Err(Self::new_token_error("Identifier", t).into()),
-        };
+        let identifier = Self::parse_identifier(self.peek_token())?;
         self.next();
 
         // =
@@ -94,7 +91,7 @@ impl Parser {
         }
 
         let stmt = ast::Statement::Let {
-            ident: ast::Identifier(name),
+            ident: identifier,
             expr: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
         };
 
@@ -191,12 +188,8 @@ impl Parser {
     }
 
     fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
-        match self.current_token() {
-            Some(Token::Identifier(id)) => {
-                Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
-            }
-            t => Err(Self::new_parse_error("identifier", t).into()),
-        }
+        let ident = Self::parse_identifier(self.current_token())?;
+        Ok(ast::Expression::Identifier(ident))
     }
 
     fn parse_integer_expression(&mut self) -> Result<ast::Expression> {
@@ -316,18 +309,12 @@ impl Parser {
         }
         self.next();
         let mut identifiers = Vec::new();
-        let ident = match self.current_token() {
-            Some(Token::Identifier(id)) => ast::Identifier(id.clone()),
-            t => return Err(Self::new_token_error("identifier", t).into()),
-        };
+        let ident = Self::parse_identifier(self.current_token())?;
         identifiers.push(ident);
         while self.peek_token().filter(|&t| t == &Token::Comma).is_some() {
             self.next();
             self.next();
-            let ident = match self.current_token() {
-                Some(Token::Identifier(id)) => ast::Identifier(id.clone()),
-                t => return Err(Self::new_token_error("identifier", t).into()),
-            };
+            let ident = Self::parse_identifier(self.current_token())?;
             identifiers.push(ident);
         }
         self.expect_peek_token_and_next(Token::RParen)?;
@@ -364,6 +351,13 @@ impl Parser {
         self.expect_peek_token(expected)?;
         self.next();
         Ok(())
+    }
+
+    fn parse_identifier(token: Option<&Token>) -> Result<ast::Identifier> {
+        match token {
+            Some(Token::Identifier(id)) => Ok(ast::Identifier(id.clone())),
+            t => Err(Self::new_parse_error("identifier", t).into()),
+        }
     }
 
     fn token_precedence(token: Option<&Token>) -> Precedence {
