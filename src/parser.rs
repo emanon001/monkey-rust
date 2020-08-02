@@ -60,63 +60,54 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Result<ast::Statement> {
-        assert!(self.current_token.is_some());
-
         match self.current_token() {
             Some(Token::Let) => self.parse_let_statement(),
             Some(Token::Return) => self.parse_return_statement(),
             Some(_) => self.parse_expression_statement(),
-            _ => unreachable!(),
+            t => Err(Self::new_parse_error("statement", t).into()),
         }
     }
 
     fn parse_let_statement(&mut self) -> Result<ast::Statement> {
         // let <identifier> = <expression>;
-        assert!(self.current_token == Some(Token::Let));
+
+        // let
+        self.expect_current_token(Token::Let)?;
+        self.next();
 
         // <identifier>
-        let identifier = Self::parse_identifier(self.peek_token())?;
-        self.next();
+        let identifier = Self::parse_identifier(self.current_token())?;
 
         // =
         self.expect_peek_token_and_next(Token::Assign)?;
+        self.next();
 
-        // TODO: parse expr
-        while self
-            .current_token()
-            .filter(|&t| t != &Token::Semicolon)
-            .is_some()
-        {
+        // <expression>
+        let expression = self.parse_expression(Precedence::Lowest)?;
+        if self.peek_token() == Some(&Token::Semicolon) {
             self.next();
         }
 
-        let stmt = ast::Statement::Let {
+        Ok(ast::Statement::Let {
             identifier,
-            expression: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
-        };
-
-        Ok(stmt)
+            expression,
+        })
     }
 
     fn parse_return_statement(&mut self) -> Result<ast::Statement> {
         // return <expression>;
-        self.expect_current_token(Token::Return)?;
 
+        // return
+        self.expect_current_token(Token::Return)?;
         self.next();
 
-        // TODO: parse expr
-        while self
-            .current_token()
-            .filter(|&t| t != &Token::Semicolon)
-            .is_some()
-        {
+        // <expression>
+        let expression = self.parse_expression(Precedence::Lowest)?;
+        if self.peek_token() == Some(&Token::Semicolon) {
             self.next();
         }
 
-        let stmt = ast::Statement::Return(
-            ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
-        );
-        Ok(stmt)
+        Ok(ast::Statement::Return(expression))
     }
 
     fn parse_expression_statement(&mut self) -> Result<ast::Statement> {
@@ -441,38 +432,49 @@ mod tests {
 
     #[test]
     fn parse_let_statements() -> Result<()> {
-        let input = r#"
-        let x = 5;
-        let y = 10;
-        let foobar = 838383;
-        "#
-        .into();
-        let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
-        assert_eq!(program.statements.len(), 3);
-        let expected_names = vec!["x", "y", "foobar"];
-        for i in 0..expected_names.len() {
-            let s = &program.statements[i];
-            test_let_statement(s, expected_names[i]);
+        // (input, identifer, value)
+        let cases = vec![
+            ("let x = 5;", "x", ast::Expression::Integer(5)),
+            ("let y = true;", "y", ast::Expression::Boolean(true)),
+            (
+                "let foobar = y;",
+                "foobar",
+                ast::Expression::Identifier(ast::Identifier("y".into())),
+            ),
+        ];
+        for (input, id, value) in cases {
+            let lexer = Lexer::new(input.into());
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse()?;
+            assert_eq!(program.statements.len(), 1);
+            let s = &program.statements[0];
+            test_let_statement(s, id, value);
         }
         Ok(())
     }
 
     #[test]
     fn parse_return_statements() -> Result<()> {
-        let input = r#"
-        return 5;
-        return 10;
-        return 993322;
-        "#
-        .into();
-        let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
-        assert_eq!(program.statements.len(), 3);
-        for s in &program.statements {
-            test_return_statement(s);
+        // (input, expression)
+        let cases = vec![
+            ("return 5;", ast::Expression::Integer(5)),
+            ("return true;", ast::Expression::Boolean(true)),
+            (
+                "return 1 + foo;",
+                ast::Expression::Infix {
+                    left: Box::new(ast::Expression::Integer(1)),
+                    operator: ast::InfixOperator::Add,
+                    right: Box::new(ast::Expression::Identifier(ast::Identifier("foo".into()))),
+                },
+            ),
+        ];
+        for (input, expression) in cases {
+            let lexer = Lexer::new(input.into());
+            let mut parser = Parser::new(lexer);
+            let program = parser.parse()?;
+            assert_eq!(program.statements.len(), 1);
+            let s = &program.statements[0];
+            test_return_statement(s, expression);
         }
         Ok(())
     }
@@ -861,16 +863,22 @@ mod tests {
         };
     }
 
-    fn test_let_statement(s: &ast::Statement, name: &str) {
+    fn test_let_statement(s: &ast::Statement, id: &str, value: ast::Expression) {
         match s {
-            ast::Statement::Let { identifier, .. } => test_identifier(identifier, name),
+            ast::Statement::Let {
+                identifier,
+                expression,
+            } => {
+                test_identifier(identifier, id);
+                assert_eq!(expression, &value);
+            }
             _ => panic!("statement not `let`. got={:?}", s),
         };
     }
 
-    fn test_return_statement(s: &ast::Statement) {
+    fn test_return_statement(s: &ast::Statement, expr: ast::Expression) {
         match s {
-            ast::Statement::Return(_) => {}
+            ast::Statement::Return(e) => assert_eq!(e, &expr),
             _ => panic!("statement not `return`. got={:?}", s),
         };
     }
