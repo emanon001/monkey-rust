@@ -701,8 +701,8 @@ mod tests {
                 ast::Expression::Function { parameters, body } => {
                     // parameters
                     assert_eq!(parameters.len(), 2);
-                    test_identifier_raw(&parameters[0], "x");
-                    test_identifier_raw(&parameters[1], "y");
+                    test_identifier(&parameters[0], "x");
+                    test_identifier(&parameters[1], "y");
                     // body
                     assert_eq!(body.statements.len(), 1);
                     let s = &body.statements[0];
@@ -778,7 +778,7 @@ mod tests {
 
     fn test_let_statement(s: &ast::Statement, name: &str) {
         match s {
-            ast::Statement::Let { identifier, .. } => test_identifier_raw(identifier, name),
+            ast::Statement::Let { identifier, .. } => test_identifier(identifier, name),
             _ => panic!("statement not `let`. got={:?}", s),
         };
     }
@@ -793,13 +793,13 @@ mod tests {
     fn test_identifier_expression(expr: &ast::Expression, name: &str) {
         match expr {
             ast::Expression::Identifier(id) => {
-                test_identifier_raw(id, name);
+                test_identifier(id, name);
             }
             _ => panic!("expression not identifier. got={:?}", expr),
         };
     }
 
-    fn test_identifier_raw(id: &ast::Identifier, name: &str) {
+    fn test_identifier(id: &ast::Identifier, name: &str) {
         let s = &id.0;
         assert_eq!(s, name, "identifier not {}. got={}", s, name);
     }
