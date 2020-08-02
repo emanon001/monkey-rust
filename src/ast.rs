@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::fmt::{self};
 
 // Program
@@ -81,6 +82,10 @@ pub enum Expression {
         consequence: BlockStatement,
         alternative: BlockStatement,
     },
+    Function {
+        parameters: Vec<Identifier>,
+        body: BlockStatement,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -100,6 +105,10 @@ impl fmt::Display for Expression {
                 consequence,
                 alternative,
             } => write!(f, "if {} {} else {}", condition, consequence, alternative),
+            Expression::Function { parameters, body } => {
+                let params = parameters.iter().map(|p| p.to_string()).join(", ");
+                write!(f, "fn ({}) {}", params, body)
+            }
         }
     }
 }
