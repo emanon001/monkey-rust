@@ -50,6 +50,7 @@ pub enum Expression {
         operator: InfixOperator,
         right: Box<Expression>,
     },
+    Boolean(bool),
 }
 
 impl fmt::Display for Expression {
@@ -63,6 +64,7 @@ impl fmt::Display for Expression {
                 operator,
                 right,
             } => write!(f, "({} {} {})", left, operator, right),
+            Expression::Boolean(b) => write!(f, "{}", b),
         }
     }
 }
