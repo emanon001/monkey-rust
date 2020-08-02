@@ -442,10 +442,8 @@ mod tests {
         let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
-        parse_expression_statement(s, |expr| {
-            test_identifier_expression(expr, "foobar");
-            Ok(())
-        })
+        parse_expression_statement(s, |expr| test_identifier_expression(expr, "foobar"));
+        Ok(())
     }
 
     #[test]
@@ -459,10 +457,7 @@ mod tests {
         let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
-        parse_expression_statement(s, |expr| {
-            test_integer_expression(expr, 5);
-            Ok(())
-        })?;
+        parse_expression_statement(s, |expr| test_integer_expression(expr, 5));
         Ok(())
     }
 
@@ -497,15 +492,12 @@ mod tests {
             let program = parser.parse()?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
-            parse_expression_statement(s, |expr| {
-                match expr {
-                    ast::Expression::Prefix { .. } => {
-                        test_prefix_expression(expr, op, r);
-                    }
-                    _ => panic!("expression not prefix. got={:?}", expr),
-                };
-                Ok(())
-            })?;
+            parse_expression_statement(s, |expr| match expr {
+                ast::Expression::Prefix { .. } => {
+                    test_prefix_expression(expr, op, r);
+                }
+                _ => panic!("expression not prefix. got={:?}", expr),
+            });
         }
         Ok(())
     }
@@ -587,15 +579,12 @@ mod tests {
             let program = parser.parse()?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
-            parse_expression_statement(s, |expr| {
-                match expr {
-                    ast::Expression::Infix { .. } => {
-                        test_infix_expression(expr, l, op, r);
-                    }
-                    _ => panic!("expression not infix. got={:?}", expr),
-                };
-                Ok(())
-            })?;
+            parse_expression_statement(s, |expr| match expr {
+                ast::Expression::Infix { .. } => {
+                    test_infix_expression(expr, l, op, r);
+                }
+                _ => panic!("expression not infix. got={:?}", expr),
+            });
         }
         Ok(())
     }
@@ -610,32 +599,30 @@ mod tests {
         let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
-        parse_expression_statement(s, |expr| {
-            match expr {
-                ast::Expression::If {
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::If {
+                condition,
+                consequence,
+                ..
+            } => {
+                // condition
+                test_infix_expression(
                     condition,
-                    consequence,
-                    ..
-                } => {
-                    // condition
-                    test_infix_expression(
-                        condition,
-                        ast::Expression::Identifier(ast::Identifier("x".into())),
-                        ast::InfixOperator::LT,
-                        ast::Expression::Identifier(ast::Identifier("y".into())),
-                    );
-                    // consequence
-                    assert_eq!(consequence.statements.len(), 1);
-                    let s = &consequence.statements[0];
-                    match s {
-                        ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
-                        _ => panic!("statement not `<expr>`. got={:?}", s),
-                    };
-                }
-                _ => panic!("expression not if. got={:?}", expr),
-            };
-            Ok(())
-        })
+                    ast::Expression::Identifier(ast::Identifier("x".into())),
+                    ast::InfixOperator::LT,
+                    ast::Expression::Identifier(ast::Identifier("y".into())),
+                );
+                // consequence
+                assert_eq!(consequence.statements.len(), 1);
+                let s = &consequence.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+            }
+            _ => panic!("expression not if. got={:?}", expr),
+        });
+        Ok(())
     }
 
     #[test]
@@ -648,39 +635,37 @@ mod tests {
         let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
-        parse_expression_statement(s, |expr| {
-            match expr {
-                ast::Expression::If {
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::If {
+                condition,
+                consequence,
+                alternative,
+            } => {
+                // condition
+                test_infix_expression(
                     condition,
-                    consequence,
-                    alternative,
-                } => {
-                    // condition
-                    test_infix_expression(
-                        condition,
-                        ast::Expression::Identifier(ast::Identifier("x".into())),
-                        ast::InfixOperator::LT,
-                        ast::Expression::Identifier(ast::Identifier("y".into())),
-                    );
-                    // consequence
-                    assert_eq!(consequence.statements.len(), 1);
-                    let s = &consequence.statements[0];
-                    match s {
-                        ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
-                        _ => panic!("statement not `<expr>`. got={:?}", s),
-                    };
-                    // alternative
-                    assert_eq!(alternative.statements.len(), 1);
-                    let s = &alternative.statements[0];
-                    match s {
-                        ast::Statement::Expression(expr) => test_identifier_expression(expr, "y"),
-                        _ => panic!("statement not `<expr>`. got={:?}", s),
-                    };
-                }
-                _ => panic!("expression not if. got={:?}", expr),
-            };
-            Ok(())
-        })
+                    ast::Expression::Identifier(ast::Identifier("x".into())),
+                    ast::InfixOperator::LT,
+                    ast::Expression::Identifier(ast::Identifier("y".into())),
+                );
+                // consequence
+                assert_eq!(consequence.statements.len(), 1);
+                let s = &consequence.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+                // alternative
+                assert_eq!(alternative.statements.len(), 1);
+                let s = &alternative.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => test_identifier_expression(expr, "y"),
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+            }
+            _ => panic!("expression not if. got={:?}", expr),
+        });
+        Ok(())
     }
 
     #[test]
@@ -693,30 +678,28 @@ mod tests {
         let program = parser.parse()?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
-        parse_expression_statement(s, |expr| {
-            match expr {
-                ast::Expression::Function { parameters, body } => {
-                    // parameters
-                    assert_eq!(parameters.len(), 2);
-                    test_identifier(&parameters[0], "x");
-                    test_identifier(&parameters[1], "y");
-                    // body
-                    assert_eq!(body.statements.len(), 1);
-                    let s = &body.statements[0];
-                    match s {
-                        ast::Statement::Expression(expr) => test_infix_expression(
-                            expr,
-                            ast::Expression::Identifier(ast::Identifier("x".into())),
-                            ast::InfixOperator::Add,
-                            ast::Expression::Identifier(ast::Identifier("y".into())),
-                        ),
-                        _ => panic!("statement not `<expr>`. got={:?}", s),
-                    };
-                }
-                _ => panic!("expression not function. got={:?}", expr),
-            };
-            Ok(())
-        })
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Function { parameters, body } => {
+                // parameters
+                assert_eq!(parameters.len(), 2);
+                test_identifier(&parameters[0], "x");
+                test_identifier(&parameters[1], "y");
+                // body
+                assert_eq!(body.statements.len(), 1);
+                let s = &body.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => test_infix_expression(
+                        expr,
+                        ast::Expression::Identifier(ast::Identifier("x".into())),
+                        ast::InfixOperator::Add,
+                        ast::Expression::Identifier(ast::Identifier("y".into())),
+                    ),
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+            }
+            _ => panic!("expression not function. got={:?}", expr),
+        });
+        Ok(())
     }
 
     #[test]
@@ -772,14 +755,14 @@ mod tests {
 
     // heplers
 
-    fn parse_expression_statement<F>(s: &ast::Statement, f: F) -> Result<()>
+    fn parse_expression_statement<F>(s: &ast::Statement, f: F)
     where
-        F: FnOnce(&ast::Expression) -> Result<()>,
+        F: FnOnce(&ast::Expression),
     {
         match s {
             ast::Statement::Expression(expr) => f(expr),
-            _ => Err(format!("statement is not `Expression`. got={:?}", s).into()),
-        }
+            _ => panic!("statement is not `Expression`. got={:?}", s),
+        };
     }
 
     fn test_let_statement(s: &ast::Statement, name: &str) {
