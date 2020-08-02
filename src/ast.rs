@@ -48,7 +48,7 @@ impl fmt::Display for Identifier {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BlockStatement {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 impl fmt::Display for BlockStatement {

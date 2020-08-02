@@ -135,6 +135,22 @@ impl Parser {
         Ok(stmt)
     }
 
+    fn parse_block_statement(&mut self) -> Result<ast::BlockStatement> {
+        self.expect_current_token(Token::LBrace)?;
+        self.next();
+        let mut statements = Vec::new();
+        while self
+            .current_token()
+            .filter(|&t| t != &Token::RBrace)
+            .is_some()
+        {
+            let s = self.parse_statement()?;
+            statements.push(s);
+            self.next();
+        }
+        Ok(ast::BlockStatement { statements })
+    }
+
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
         // <identifier> | <integer> | <prefix>
         let mut left = match self.current_token() {
@@ -143,6 +159,7 @@ impl Parser {
             Some(Token::Bang) | Some(Token::Minus) => self.parse_prefix_expression(),
             Some(Token::True) | Some(Token::False) => self.parse_boolean_expression(),
             Some(Token::LParen) => self.parse_grouped_expression(),
+            Some(Token::If) => self.parse_if_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
         }?;
 
@@ -241,6 +258,33 @@ impl Parser {
         self.expect_peek_token(Token::RParen)?;
         self.next();
         Ok(expr)
+    }
+
+    fn parse_if_expression(&mut self) -> Result<ast::Expression> {
+        // if <condition> { <consequence> } else { <alternative> }
+
+        // if
+        self.expect_current_token(Token::If)?;
+        // <condition>
+        self.expect_peek_token(Token::LParen)?;
+        self.next();
+        self.next();
+        let condition = self.parse_expression(Precedence::Lowest)?;
+        self.expect_peek_token(Token::RParen)?;
+        self.next();
+        // { <consequence> }
+        self.expect_peek_token(Token::LBrace)?;
+        self.next();
+        let consequence = self.parse_block_statement()?;
+        // TODO: parse else
+        let alternative = ast::BlockStatement {
+            statements: Vec::new(),
+        };
+        Ok(ast::Expression::If {
+            condition: Box::new(condition),
+            consequence,
+            alternative,
+        })
     }
 
     fn current_prececence(&self) -> Precedence {
@@ -507,6 +551,45 @@ mod tests {
                 _ => panic!("statement not `<expr>`. got={:?}", s),
             };
         }
+        Ok(())
+    }
+
+    #[test]
+    fn parse_if_expression() -> Result<()> {
+        let input = r#"
+        if (x < y) { x }
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        match s {
+            ast::Statement::Expression(expr) => match expr {
+                ast::Expression::If {
+                    condition,
+                    consequence,
+                    ..
+                } => {
+                    // condition
+                    test_infix_expression(
+                        condition,
+                        ast::Expression::Identifier(ast::Identifier("x".into())),
+                        ast::InfixOperator::LT,
+                        ast::Expression::Identifier(ast::Identifier("y".into())),
+                    );
+                    // consequence
+                    assert_eq!(consequence.statements.len(), 1);
+                    let s = &consequence.statements[0];
+                    match s {
+                        ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
+                        _ => panic!("statement not `<expr>`. got={:?}", s),
+                    };
+                }
+                _ => panic!("expression not if. got={:?}", expr),
+            },
+            _ => panic!("statement not `<expr>`. got={:?}", s),
+        };
         Ok(())
     }
 
