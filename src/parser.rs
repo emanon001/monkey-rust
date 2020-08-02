@@ -79,11 +79,10 @@ impl Parser {
             Some(Token::Identifier(name)) => name.clone(),
             t => return Err(Self::new_token_error("Identifier", t).into()),
         };
+        self.next();
 
         // =
-        self.next();
-        self.expect_peek_token(Token::Assign)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::Assign)?;
 
         // TODO: parse expr
         while self
@@ -255,8 +254,7 @@ impl Parser {
         self.expect_current_token(Token::LParen)?;
         self.next();
         let expr = self.parse_expression(Precedence::Lowest)?;
-        self.expect_peek_token(Token::RParen)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::RParen)?;
         Ok(expr)
     }
 
@@ -266,21 +264,17 @@ impl Parser {
         // if
         self.expect_current_token(Token::If)?;
         // <condition>
-        self.expect_peek_token(Token::LParen)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::LParen)?;
         self.next();
         let condition = self.parse_expression(Precedence::Lowest)?;
-        self.expect_peek_token(Token::RParen)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::RParen)?;
         // { <consequence> }
-        self.expect_peek_token(Token::LBrace)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::LBrace)?;
         let consequence = self.parse_block_statement()?;
         // [ else { <alternative> } ]
         let alternative = if self.peek_token() == Some(&Token::Else) {
             self.next();
-            self.expect_peek_token(Token::LBrace)?;
-            self.next();
+            self.expect_peek_token_and_next(Token::LBrace)?;
             self.parse_block_statement()?
         } else {
             ast::BlockStatement {
@@ -299,17 +293,13 @@ impl Parser {
 
         // fn(<arguments>)
         self.expect_current_token(Token::Function)?;
-        self.expect_peek_token(Token::LParen)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::LParen)?;
         let parameters = self.parse_function_parameters()?;
-        self.expect_peek_token(Token::RParen);
-        self.next();
+        self.expect_peek_token_and_next(Token::RParen);
         // { <body> }
-        self.expect_peek_token(Token::LBrace)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::LBrace)?;
         let body = self.parse_block_statement()?;
-        self.expect_peek_token(Token::RParen)?;
-        self.next();
+        self.expect_peek_token_and_next(Token::RParen)?;
 
         Ok(ast::Expression::Function { parameters, body })
     }
@@ -342,6 +332,12 @@ impl Parser {
             let s = format!("{:?}", expected);
             Err(Self::new_token_error(&s, self.peek_token()).into())
         }
+    }
+
+    fn expect_peek_token_and_next(&mut self, expected: Token) -> Result<()> {
+        self.expect_peek_token(expected)?;
+        self.next();
+        Ok(())
     }
 
     fn token_precedence(token: Option<&Token>) -> Precedence {
