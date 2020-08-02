@@ -71,7 +71,7 @@ impl Parser {
     }
 
     fn parse_let_statement(&mut self) -> Result<ast::Statement> {
-        // let <identifier> = <expr>;
+        // let <identifier> = <expression>;
         assert!(self.current_token == Some(Token::Let));
 
         // <identifier>
@@ -91,8 +91,8 @@ impl Parser {
         }
 
         let stmt = ast::Statement::Let {
-            ident: identifier,
-            expr: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
+            identifier,
+            expression: ast::Expression::Identifier(ast::Identifier("dummy".into())), // TODO: use parsed expr
         };
 
         Ok(stmt)
@@ -766,8 +766,8 @@ mod tests {
     fn display() {
         let program = ast::Program {
             statements: vec![ast::Statement::Let {
-                ident: ast::Identifier("my_var".into()),
-                expr: ast::Expression::Identifier(ast::Identifier("another_var".into())),
+                identifier: ast::Identifier("my_var".into()),
+                expression: ast::Expression::Identifier(ast::Identifier("another_var".into())),
             }],
         };
         let source = format!("{}", program);
@@ -778,7 +778,7 @@ mod tests {
 
     fn test_let_statement(s: &ast::Statement, name: &str) {
         match s {
-            ast::Statement::Let { ident, .. } => test_identifier_raw(ident, name),
+            ast::Statement::Let { identifier, .. } => test_identifier_raw(identifier, name),
             _ => panic!("statement not `let`. got={:?}", s),
         };
     }
