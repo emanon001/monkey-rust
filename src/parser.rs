@@ -74,17 +74,15 @@ impl Parser {
         // let <identifier> = <expr>;
         assert!(self.current_token == Some(Token::Let));
 
+        // <identifier>
         let name = match self.peek_token() {
             Some(Token::Identifier(name)) => name.clone(),
             t => return Err(Self::new_token_error("Identifier", t).into()),
         };
 
+        // =
         self.next();
-        match self.peek_token() {
-            Some(Token::Assign) => {}
-            t => return Err(Self::new_token_error("Assign", t).into()),
-        };
-
+        self.expect_peek_token(Token::Assign)?;
         self.next();
 
         // TODO: parse expr
@@ -106,7 +104,7 @@ impl Parser {
 
     fn parse_return_statement(&mut self) -> Result<ast::Statement> {
         // return <expression>;
-        assert!(self.current_token == Some(Token::Return));
+        self.expect_current_token(Token::Return)?;
 
         self.next();
 
@@ -138,16 +136,14 @@ impl Parser {
     }
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
-        let token = self
-            .current_token()
-            .ok_or(Self::new_parse_error("expression", None))?;
         // <identifier> | <integer> | <prefix>
-        let mut left = match token {
-            Token::Identifier(_) => self.parse_identifier_expression(),
-            Token::Int(_) => self.parse_integer_expression(),
-            Token::Bang | Token::Minus => self.parse_prefix_expression(),
-            Token::True | Token::False => self.parse_boolean_expression(),
-            t => Err(Self::new_parse_error("expression", Some(t)).into()),
+        let mut left = match self.current_token() {
+            Some(Token::Identifier(_)) => self.parse_identifier_expression(),
+            Some(Token::Int(_)) => self.parse_integer_expression(),
+            Some(Token::Bang) | Some(Token::Minus) => self.parse_prefix_expression(),
+            Some(Token::True) | Some(Token::False) => self.parse_boolean_expression(),
+            Some(Token::LParen) => self.parse_grouped_expression(),
+            t => Err(Self::new_parse_error("prefix expression", t).into()),
         }?;
 
         while self
@@ -175,25 +171,29 @@ impl Parser {
     }
 
     fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
-        let token = self
-            .current_token()
-            .ok_or(Self::new_parse_error("identifier", None))?;
-        match token {
-            Token::Identifier(id) => Ok(ast::Expression::Identifier(ast::Identifier(id.clone()))),
-            t => Err(Self::new_parse_error("identifier", Some(t)).into()),
+        match self.current_token() {
+            Some(Token::Identifier(id)) => {
+                Ok(ast::Expression::Identifier(ast::Identifier(id.clone())))
+            }
+            t => Err(Self::new_parse_error("identifier", t).into()),
         }
     }
 
     fn parse_integer_expression(&mut self) -> Result<ast::Expression> {
-        let token = self
-            .current_token()
-            .ok_or(Self::new_parse_error("integer", None))?;
-        match token {
-            Token::Int(s) => match s.parse::<i64>() {
+        match self.current_token() {
+            Some(Token::Int(s)) => match s.parse::<i64>() {
                 Ok(n) => Ok(ast::Expression::Integer(n)),
-                Err(_) => Err(Self::new_parse_error("integer", Some(token)).into()),
+                Err(_) => Err(Self::new_parse_error("integer", self.current_token()).into()),
             },
-            t => Err(Self::new_parse_error("integer", Some(t)).into()),
+            t => Err(Self::new_parse_error("integer", t).into()),
+        }
+    }
+
+    fn parse_boolean_expression(&mut self) -> Result<ast::Expression> {
+        match self.current_token() {
+            Some(Token::True) => Ok(ast::Expression::Boolean(true)),
+            Some(Token::False) => Ok(ast::Expression::Boolean(false)),
+            t => Err(Self::new_parse_error("boolean", t).into()),
         }
     }
 
@@ -233,15 +233,14 @@ impl Parser {
         })
     }
 
-    fn parse_boolean_expression(&mut self) -> Result<ast::Expression> {
-        let token = self
-            .current_token()
-            .ok_or(Self::new_parse_error("boolean", None))?;
-        match token {
-            Token::True => Ok(ast::Expression::Boolean(true)),
-            Token::False => Ok(ast::Expression::Boolean(false)),
-            t => Err(Self::new_parse_error("boolean", Some(t)).into()),
-        }
+    fn parse_grouped_expression(&mut self) -> Result<ast::Expression> {
+        // ( <expression> )
+        self.expect_current_token(Token::LParen)?;
+        self.next();
+        let expr = self.parse_expression(Precedence::Lowest)?;
+        self.expect_peek_token(Token::RParen)?;
+        self.next();
+        Ok(expr)
     }
 
     fn current_prececence(&self) -> Precedence {
@@ -250,6 +249,24 @@ impl Parser {
 
     fn peek_prececence(&mut self) -> Precedence {
         Self::token_precedence(self.peek_token())
+    }
+
+    fn expect_current_token(&mut self, expected: Token) -> Result<()> {
+        if self.current_token() == Some(&expected) {
+            Ok(())
+        } else {
+            let s = format!("{:?}", expected);
+            Err(Self::new_token_error(&s, self.peek_token()).into())
+        }
+    }
+
+    fn expect_peek_token(&mut self, expected: Token) -> Result<()> {
+        if self.peek_token() == Some(&expected) {
+            Ok(())
+        } else {
+            let s = format!("{:?}", expected);
+            Err(Self::new_token_error(&s, self.peek_token()).into())
+        }
     }
 
     fn token_precedence(token: Option<&Token>) -> Precedence {
@@ -516,6 +533,11 @@ mod tests {
             ("false", "false"),
             ("3 > 5 == false", "((3 > 5) == false)"),
             ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
         ];
         for (input, expected) in cases {
             let lexer = Lexer::new(input.into());
