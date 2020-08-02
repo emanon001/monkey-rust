@@ -181,6 +181,10 @@ impl Parser {
                     self.next();
                     self.parse_infix_expression(left)?
                 }
+                Token::LParen => {
+                    self.next();
+                    self.parse_call_expression(left)?
+                }
                 _ => return Ok(left),
             }
         }
@@ -324,6 +328,44 @@ impl Parser {
         Ok(identifiers)
     }
 
+    fn parse_call_expression(&mut self, function: ast::Expression) -> Result<ast::Expression> {
+        let function = match function {
+            ast::Expression::Identifier(id) => ast::CallExpressionFunction::Identifier(id),
+            ast::Expression::Function(func) => ast::CallExpressionFunction::Function(func),
+            _ => {
+                return Err(
+                    format!("could not parse {:?} as call expression function", function).into(),
+                )
+            }
+        };
+        let arguments = self.parse_call_arguments()?;
+        Ok(ast::Expression::Call {
+            function,
+            arguments,
+        })
+    }
+
+    fn parse_call_arguments(&mut self) -> Result<Vec<ast::Expression>> {
+        // ([<arg>, ...])
+        self.expect_current_token(Token::LParen)?;
+        if self.peek_token() == Some(&Token::RParen) {
+            self.next();
+            return Ok(Vec::new());
+        }
+        self.next();
+        let mut arguments = Vec::new();
+        let arg = self.parse_expression(Precedence::Lowest)?;
+        arguments.push(arg);
+        while self.peek_token().filter(|&t| t == &Token::Comma).is_some() {
+            self.next();
+            self.next();
+            let arg = self.parse_expression(Precedence::Lowest)?;
+            arguments.push(arg);
+        }
+        self.expect_peek_token_and_next(Token::RParen)?;
+        Ok(arguments)
+    }
+
     fn current_prececence(&self) -> Precedence {
         Self::token_precedence(self.current_token())
     }
@@ -369,6 +411,7 @@ impl Parser {
             Some(Token::Asterisk) | Some(Token::Slash) => Precedence::Product,
             Some(Token::LT) | Some(Token::GT) => Precedence::LessGreater,
             Some(Token::Eq) | Some(Token::NotEq) => Precedence::Equals,
+            Some(Token::LParen) => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }
@@ -774,6 +817,15 @@ mod tests {
             ("2 / (5 + 5)", "(2 / (5 + 5))"),
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
+            ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+            (
+                "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+                "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            ),
+            (
+                "add(a + b + c * d / f + g)",
+                "add((((a + b) + ((c * d) / f)) + g))",
+            ),
         ];
         for (input, expected) in cases {
             let lexer = Lexer::new(input.into());

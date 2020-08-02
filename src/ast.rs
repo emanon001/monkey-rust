@@ -121,7 +121,7 @@ impl fmt::Display for Expression {
                 function,
                 arguments,
             } => {
-                let args = arguments.into_iter().join(",");
+                let args = arguments.into_iter().join(", ");
                 write!(f, "{}({})", function, args)
             }
         }
