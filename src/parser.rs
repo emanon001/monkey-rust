@@ -261,7 +261,7 @@ impl Parser {
     }
 
     fn parse_if_expression(&mut self) -> Result<ast::Expression> {
-        // if <condition> { <consequence> } else { <alternative> }
+        // if <condition> { <consequence> } [ else { <alternative> } ]
 
         // if
         self.expect_current_token(Token::If)?;
@@ -276,9 +276,16 @@ impl Parser {
         self.expect_peek_token(Token::LBrace)?;
         self.next();
         let consequence = self.parse_block_statement()?;
-        // TODO: parse else
-        let alternative = ast::BlockStatement {
-            statements: Vec::new(),
+        // [ else { <alternative> } ]
+        let alternative = if self.peek_token() == Some(&Token::Else) {
+            self.next();
+            self.expect_peek_token(Token::LBrace)?;
+            self.next();
+            self.parse_block_statement()?
+        } else {
+            ast::BlockStatement {
+                statements: Vec::new(),
+            }
         };
         Ok(ast::Expression::If {
             condition: Box::new(condition),
@@ -583,6 +590,52 @@ mod tests {
                     let s = &consequence.statements[0];
                     match s {
                         ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
+                        _ => panic!("statement not `<expr>`. got={:?}", s),
+                    };
+                }
+                _ => panic!("expression not if. got={:?}", expr),
+            },
+            _ => panic!("statement not `<expr>`. got={:?}", s),
+        };
+        Ok(())
+    }
+
+    #[test]
+    fn parse_if_else_expression() -> Result<()> {
+        let input = r#"
+        if (x < y) { x } else { y }
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        match s {
+            ast::Statement::Expression(expr) => match expr {
+                ast::Expression::If {
+                    condition,
+                    consequence,
+                    alternative,
+                } => {
+                    // condition
+                    test_infix_expression(
+                        condition,
+                        ast::Expression::Identifier(ast::Identifier("x".into())),
+                        ast::InfixOperator::LT,
+                        ast::Expression::Identifier(ast::Identifier("y".into())),
+                    );
+                    // consequence
+                    assert_eq!(consequence.statements.len(), 1);
+                    let s = &consequence.statements[0];
+                    match s {
+                        ast::Statement::Expression(expr) => test_identifier_expression(expr, "x"),
+                        _ => panic!("statement not `<expr>`. got={:?}", s),
+                    };
+                    // alternative
+                    assert_eq!(alternative.statements.len(), 1);
+                    let s = &alternative.statements[0];
+                    match s {
+                        ast::Statement::Expression(expr) => test_identifier_expression(expr, "y"),
                         _ => panic!("statement not `<expr>`. got={:?}", s),
                     };
                 }
