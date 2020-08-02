@@ -706,6 +706,47 @@ mod tests {
     }
 
     #[test]
+    fn parse_call_expression() -> Result<()> {
+        let input = r#"
+        add(1, 2 * 3, 4 + 5);
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut parser = Parser::new(lexer);
+        let program = parser.parse()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Call {
+                function,
+                arguments,
+            } => {
+                // function
+                match function {
+                    ast::CallExpressionFunction::Identifier(id) => test_identifier(id, "add"),
+                    _ => panic!("function is not identifier. got={:?}", function),
+                }
+                // arguments
+                assert_eq!(arguments.len(), 3);
+                test_integer_expression(&arguments[0], 1);
+                test_infix_expression(
+                    &arguments[1],
+                    ast::Expression::Integer(2),
+                    ast::InfixOperator::Mul,
+                    ast::Expression::Integer(3),
+                );
+                test_infix_expression(
+                    &arguments[2],
+                    ast::Expression::Integer(4),
+                    ast::InfixOperator::Add,
+                    ast::Expression::Integer(5),
+                );
+            }
+            _ => panic!("expression not function. got={:?}", expr),
+        });
+        Ok(())
+    }
+
+    #[test]
     fn parse_precedence() -> Result<()> {
         // (input, expected)
         let cases = vec![
