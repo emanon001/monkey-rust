@@ -323,7 +323,7 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         match s {
-            ast::Statement::Expression(expr) => test_identifier(expr, "foobar"),
+            ast::Statement::Expression(expr) => test_identifier_expression(expr, "foobar"),
             _ => panic!("statement not `<expr>`. got={:?}", s),
         };
         Ok(())
@@ -341,13 +341,7 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         match s {
-            ast::Statement::Expression(expr) => match expr {
-                ast::Expression::Integer(n) => {
-                    let expected = 5;
-                    assert_eq!(*n, expected, "integer not {}. got={}", expected, n);
-                }
-                _ => panic!("expression not Integer. got={:?}", expr),
-            },
+            ast::Statement::Expression(expr) => test_integer_expression(expr, 5),
             _ => panic!("statement not `<expr>`. got={:?}", s),
         };
         Ok(())
@@ -476,17 +470,26 @@ mod tests {
         };
     }
 
-    fn test_identifier(s: &ast::Expression, name: &str) {
-        match s {
+    fn test_identifier_expression(expr: &ast::Expression, name: &str) {
+        match expr {
             ast::Expression::Identifier(id) => {
                 test_identifier_raw(id, name);
             }
-            _ => panic!("expression not identifier. got={:?}", s),
+            _ => panic!("expression not identifier. got={:?}", expr),
         };
     }
 
     fn test_identifier_raw(id: &ast::Identifier, name: &str) {
         let s = &id.0;
         assert_eq!(s, name, "identifier not {}. got={}", s, name);
+    }
+
+    fn test_integer_expression(expr: &ast::Expression, num: i64) {
+        match expr {
+            ast::Expression::Integer(n) => {
+                assert_eq!(*n, num, "integer not {}. got={}", num, n);
+            }
+            _ => panic!("expression not Integer. got={:?}", expr),
+        }
     }
 }
