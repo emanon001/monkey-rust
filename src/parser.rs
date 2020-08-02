@@ -395,14 +395,13 @@ mod tests {
             let s = &program.statements[0];
             match s {
                 ast::Statement::Expression(expr) => match expr {
-                    ast::Expression::Infix {
-                        left,
-                        operator,
-                        right,
-                    } => {
-                        assert_eq!(left, &Box::new(ast::Expression::Integer(l)));
-                        assert_eq!(operator, &op);
-                        assert_eq!(right, &Box::new(ast::Expression::Integer(r)));
+                    ast::Expression::Infix { .. } => {
+                        test_infix_expression(
+                            expr,
+                            ast::Expression::Integer(l),
+                            op,
+                            ast::Expression::Integer(r),
+                        );
                     }
                     _ => panic!("expression not infix. got={:?}", expr),
                 },
@@ -490,6 +489,26 @@ mod tests {
                 assert_eq!(*n, num, "integer not {}. got={}", num, n);
             }
             _ => panic!("expression not Integer. got={:?}", expr),
+        }
+    }
+
+    fn test_infix_expression(
+        expr: &ast::Expression,
+        left: ast::Expression,
+        operator: ast::InfixOperator,
+        right: ast::Expression,
+    ) {
+        match expr {
+            ast::Expression::Infix {
+                left: l,
+                operator: op,
+                right: r,
+            } => {
+                assert_eq!(l, &Box::new(left));
+                assert_eq!(op, &operator);
+                assert_eq!(r, &Box::new(right));
+            }
+            _ => panic!("expression not infix. got={:?}", expr),
         }
     }
 }
