@@ -128,6 +128,18 @@ impl fmt::Display for Expression {
     }
 }
 
+impl std::convert::From<Identifier> for Expression {
+    fn from(id: Identifier) -> Self {
+        Self::Identifier(id)
+    }
+}
+
+impl std::convert::From<FunctionExpression> for Expression {
+    fn from(func: FunctionExpression) -> Self {
+        Self::Function(func)
+    }
+}
+
 // PrefixOperator
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

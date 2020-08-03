@@ -184,7 +184,7 @@ impl Parser {
 
     fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
         let ident = Self::parse_identifier(self.current_token())?;
-        Ok(ast::Expression::Identifier(ident))
+        Ok(ident.into())
     }
 
     fn parse_integer_expression(&mut self) -> Result<ast::Expression> {
@@ -292,10 +292,7 @@ impl Parser {
         self.expect_peek_token_and_next(Token::LBrace)?;
         let body = self.parse_block_statement()?;
 
-        Ok(ast::Expression::Function(ast::FunctionExpression {
-            parameters,
-            body,
-        }))
+        Ok(ast::FunctionExpression { parameters, body }.into())
     }
 
     fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
@@ -439,7 +436,7 @@ mod tests {
             (
                 "let foobar = y;",
                 "foobar",
-                ast::Expression::Identifier(ast::Identifier("y".into())),
+                ast::Expression::from(ast::Identifier("y".into())),
             ),
         ];
         for (input, id, value) in cases {
@@ -464,7 +461,7 @@ mod tests {
                 ast::Expression::Infix {
                     left: Box::new(ast::Expression::Integer(1)),
                     operator: ast::InfixOperator::Add,
-                    right: Box::new(ast::Expression::Identifier(ast::Identifier("foo".into()))),
+                    right: Box::new(ast::Expression::from(ast::Identifier("foo".into()))),
                 },
             ),
         ];
@@ -656,9 +653,9 @@ mod tests {
                 // condition
                 test_infix_expression(
                     condition,
-                    ast::Expression::Identifier(ast::Identifier("x".into())),
+                    ast::Expression::from(ast::Identifier("x".into())),
                     ast::InfixOperator::LT,
-                    ast::Expression::Identifier(ast::Identifier("y".into())),
+                    ast::Expression::from(ast::Identifier("y".into())),
                 );
                 // consequence
                 assert_eq!(consequence.statements.len(), 1);
@@ -692,9 +689,9 @@ mod tests {
                 // condition
                 test_infix_expression(
                     condition,
-                    ast::Expression::Identifier(ast::Identifier("x".into())),
+                    ast::Expression::from(ast::Identifier("x".into())),
                     ast::InfixOperator::LT,
-                    ast::Expression::Identifier(ast::Identifier("y".into())),
+                    ast::Expression::from(ast::Identifier("y".into())),
                 );
                 // consequence
                 assert_eq!(consequence.statements.len(), 1);
@@ -844,7 +841,7 @@ mod tests {
         let program = ast::Program {
             statements: vec![ast::Statement::Let {
                 identifier: ast::Identifier("my_var".into()),
-                expression: ast::Expression::Identifier(ast::Identifier("another_var".into())),
+                expression: ast::Identifier("another_var".into()).into(),
             }],
         };
         let source = format!("{}", program);
