@@ -154,8 +154,27 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<ast::Expression> {
         // <expression>
 
-        // parse prefix expression
-        let mut left = match self.current_token() {
+        // parse prefix
+        let mut left = self.parse_prefix()?;
+
+        // parse infix
+        while self
+            .peek_token()
+            .filter(|&t| t != &Token::Semicolon)
+            .is_some()
+            && precedence < self.peek_prececence()
+        {
+            let (expr, skipped) = self.parse_infix(left)?;
+            if skipped {
+                return Ok(expr);
+            }
+            left = expr;
+        }
+        Ok(left)
+    }
+
+    fn parse_prefix(&mut self) -> Result<ast::Expression> {
+        match self.current_token() {
             Some(Token::Identifier(_)) => self.parse_identifier_expression(),
             Some(Token::Int(_)) => self.parse_integer_expression(),
             Some(Token::Bang) | Some(Token::Minus) => self.parse_prefix_expression(),
@@ -164,35 +183,30 @@ impl Parser {
             Some(Token::If) => self.parse_if_expression(),
             Some(Token::Function) => self.parse_function_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
-        }?;
-
-        // parse infix expression
-        while self
-            .peek_token()
-            .filter(|&t| t != &Token::Semicolon)
-            .is_some()
-            && precedence < self.peek_prececence()
-        {
-            left = match self.peek_token().unwrap() {
-                Token::Plus
-                | Token::Minus
-                | Token::Asterisk
-                | Token::Slash
-                | Token::LT
-                | Token::GT
-                | Token::Eq
-                | Token::NotEq => {
-                    self.next();
-                    self.parse_infix_expression(left)?
-                }
-                Token::LParen => {
-                    self.next();
-                    self.parse_call_expression(left)?
-                }
-                _ => return Ok(left),
-            }
         }
-        Ok(left)
+    }
+
+    fn parse_infix(&mut self, left: ast::Expression) -> Result<(ast::Expression, bool)> {
+        match self.peek_token().unwrap() {
+            Token::Plus
+            | Token::Minus
+            | Token::Asterisk
+            | Token::Slash
+            | Token::LT
+            | Token::GT
+            | Token::Eq
+            | Token::NotEq => {
+                self.next();
+                let expr = self.parse_infix_expression(left)?;
+                Ok((expr, false))
+            }
+            Token::LParen => {
+                self.next();
+                let expr = self.parse_call_expression(left)?;
+                Ok((expr, false))
+            }
+            _ => return Ok((left, true)),
+        }
     }
 
     fn parse_identifier_expression(&mut self) -> Result<ast::Expression> {
