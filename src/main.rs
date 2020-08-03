@@ -2,6 +2,7 @@ use rmonkey::repl::Repl;
 use std::io::{self};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let repl = Repl::new(">> ".into());
+    let prompt = ">> ".to_string();
+    let repl = Repl::new(prompt);
     repl.start(io::stdin(), io::stdout())
 }

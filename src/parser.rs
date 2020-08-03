@@ -1,6 +1,7 @@
 use crate::ast::{self};
 use crate::lexer::Lexer;
 use crate::token::Token;
+use itertools::Itertools;
 
 pub struct Parser {
     lexer: std::iter::Peekable<Lexer>,
@@ -18,7 +19,19 @@ pub enum Precedence {
     Call,
 }
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+// for inner parse
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Errors(pub Vec<String>);
+
+impl std::fmt::Display for Errors {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.0.iter().join("\n");
+        write!(f, "{}", s)
+    }
+}
+impl std::error::Error for Errors {}
 
 impl Parser {
     pub fn new(lexer: Lexer) -> Self {
@@ -30,7 +43,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<ast::Program> {
+    pub fn parse(&mut self) -> std::result::Result<ast::Program, Errors> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
         while self.current_token().is_some() {
@@ -43,7 +56,7 @@ impl Parser {
         if errors.is_empty() {
             Ok(ast::Program { statements })
         } else {
-            Err(errors.join("\n").into())
+            Err(Errors(errors))
         }
     }
 

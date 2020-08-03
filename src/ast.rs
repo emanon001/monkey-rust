@@ -27,6 +27,7 @@ pub enum Statement {
     },
     Return(Expression),
     Expression(Expression),
+    #[allow(dead_code)]
     Block(BlockStatement),
 }
 

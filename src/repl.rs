@@ -1,4 +1,5 @@
 use crate::lexer::Lexer;
+use crate::parser::{self, Parser};
 use std::io::prelude::*;
 use std::io::{self, BufRead};
 
@@ -23,11 +24,28 @@ impl Repl {
         for l in reader.lines() {
             let l = l?;
             let lexer = Lexer::new(l);
-            for t in lexer {
-                writer.write_fmt(format_args!("{:?}\n", t))?;
+            let mut parser = Parser::new(lexer);
+            match parser.parse() {
+                Ok(program) => {
+                    writer.write_fmt(format_args!("{}\n", program))?;
+                }
+                Err(parser::Errors(e)) => {
+                    Self::print_parse_error(&mut writer, e)?;
+                }
             }
             writer.write_fmt(format_args!("{}", self.prompt))?;
             writer.flush()?;
+        }
+        Ok(())
+    }
+
+    fn print_parse_error<W: io::Write>(
+        writer: &mut io::BufWriter<W>,
+        errors: Vec<String>,
+    ) -> io::Result<()> {
+        writer.write_fmt(format_args!("parser errors:\n"))?;
+        for e in errors {
+            writer.write_fmt(format_args!("\t{}\n", e))?;
         }
         Ok(())
     }
