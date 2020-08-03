@@ -187,20 +187,20 @@ impl Parser {
     }
 
     fn parse_infix(&mut self, left: ast::Expression) -> Result<(ast::Expression, bool)> {
-        match self.peek_token().unwrap() {
-            Token::Plus
-            | Token::Minus
-            | Token::Asterisk
-            | Token::Slash
-            | Token::LT
-            | Token::GT
-            | Token::Eq
-            | Token::NotEq => {
+        match self.peek_token() {
+            Some(Token::Plus)
+            | Some(Token::Minus)
+            | Some(Token::Asterisk)
+            | Some(Token::Slash)
+            | Some(Token::LT)
+            | Some(Token::GT)
+            | Some(Token::Eq)
+            | Some(Token::NotEq) => {
                 self.next();
                 let expr = self.parse_infix_expression(left)?;
                 Ok((expr, false))
             }
-            Token::LParen => {
+            Some(Token::LParen) => {
                 self.next();
                 let expr = self.parse_call_expression(left)?;
                 Ok((expr, false))
