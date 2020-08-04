@@ -10,8 +10,14 @@ fn eval_program(program: ast::Program) -> obj::Object {
     let mut res = null_object();
     for s in stmts {
         res = eval_statement(s);
-        if let obj::Object::Return(obj) = res {
-            return *obj;
+        match res {
+            obj::Object::Return(o) => {
+                return *o;
+            }
+            obj::Object::Error(_) => {
+                return res;
+            }
+            _ => {}
         }
     }
     res
@@ -21,7 +27,13 @@ fn eval_statement(stmt: ast::Statement) -> obj::Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr),
         ast::Statement::Block(block) => eval_block_statements(block),
-        ast::Statement::Return(expr) => obj::Object::Return(Box::new(eval_expression(expr))),
+        ast::Statement::Return(expr) => {
+            let v = eval_expression(expr);
+            if is_error_object(&v) {
+                return v;
+            }
+            obj::Object::Return(Box::new(v))
+        }
         _ => null_object(),
     }
 }
@@ -31,8 +43,14 @@ fn eval_block_statements(block: ast::BlockStatement) -> obj::Object {
     let mut res = null_object();
     for s in stmts {
         res = eval_statement(s);
-        if let obj::Object::Return(_) = res {
-            return res;
+        match &res {
+            obj::Object::Return(_) => {
+                return res;
+            }
+            obj::Object::Error(_) => {
+                return res;
+            }
+            _ => {}
         }
     }
     res
@@ -44,6 +62,9 @@ fn eval_expression(expr: ast::Expression) -> obj::Object {
         ast::Expression::Boolean(b) => obj::Boolean(b).into(),
         ast::Expression::Prefix { operator, right } => {
             let right = eval_expression(*right);
+            if is_error_object(&right) {
+                return right;
+            }
             eval_prefix_expression(operator, right)
         }
         ast::Expression::Infix {
@@ -52,7 +73,13 @@ fn eval_expression(expr: ast::Expression) -> obj::Object {
             right,
         } => {
             let left = eval_expression(*left);
+            if is_error_object(&left) {
+                return left;
+            }
             let right = eval_expression(*right);
+            if is_error_object(&right) {
+                return right;
+            }
             eval_infix_expression(operator, left, right)
         }
         ast::Expression::If {
@@ -82,7 +109,7 @@ fn eval_bang_prefix_operator_expression(right: obj::Object) -> obj::Object {
 fn eval_minus_prefix_operator_expression(right: obj::Object) -> obj::Object {
     match right {
         obj::Object::Integer(obj::Integer(n)) => obj::Integer(-n).into(),
-        _ => null_object(),
+        r => new_error_object(&format!("unknown operator: -{}", r)),
     }
 }
 
@@ -98,7 +125,10 @@ fn eval_infix_expression(
         (obj::Object::Boolean(l), obj::Object::Boolean(r)) => {
             eval_boolean_infix_expression(op, l, r)
         }
-        _ => null_object(),
+        (l, r) if l.object_type() != r.object_type() => {
+            new_error_object(&format!("type mismatch: {} {} {}", l, op, r))
+        }
+        (l, r) => new_error_object(&format!("unknown operator: {} {} {}", l, op, r)),
     }
 }
 
@@ -131,7 +161,7 @@ fn eval_boolean_infix_expression(
     match op {
         ast::InfixOperator::Eq => obj::Boolean(left == right).into(),
         ast::InfixOperator::NotEq => obj::Boolean(left != right).into(),
-        _ => null_object(),
+        _ => new_error_object(&format!("unknown operator: {} {} {}", left, op, right)),
     }
 }
 
@@ -141,6 +171,9 @@ fn eval_if_expression(
     alternative: Option<ast::BlockStatement>,
 ) -> obj::Object {
     let condition = eval_expression(condition);
+    if is_error_object(&condition) {
+        return condition;
+    }
     if is_truthy(condition) {
         eval_statement(consequence.into())
     } else if let Some(alternative) = alternative {
@@ -168,6 +201,17 @@ fn false_object() -> obj::Object {
 
 fn null_object() -> obj::Object {
     obj::Object::Null
+}
+
+fn new_error_object(s: &str) -> obj::Object {
+    obj::Object::Error(s.into())
+}
+
+fn is_error_object(o: &obj::Object) -> bool {
+    match o {
+        obj::Object::Error(_) => true,
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -287,6 +331,36 @@ mod tests {
         for (input, expected) in tests {
             let v = test_eval(input.into());
             assert_eq!(v, expected.into());
+        }
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let tests = vec![
+            ("5 + true;", "type mismatch: 5 + true"),
+            ("5 + true; 5;", "type mismatch: 5 + true"),
+            ("-true", "unknown operator: -true"),
+            ("true + false", "unknown operator: true + false"),
+            ("5; true + false; 5;", "unknown operator: true + false"),
+            (
+                "if (10 > 1) { true + false; }",
+                "unknown operator: true + false",
+            ),
+            (
+                r#"
+                if (10 > 1) {
+                    if (10 > 1) {
+                        return true + false;
+                    }
+                    return 1;
+                }
+                "#,
+                "unknown operator: true + false",
+            ),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, obj::Object::Error(expected.into()));
         }
     }
 
