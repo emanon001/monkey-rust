@@ -58,8 +58,8 @@ fn eval_block_statements(block: ast::BlockStatement) -> obj::Object {
 
 fn eval_expression(expr: ast::Expression) -> obj::Object {
     match expr {
-        ast::Expression::Integer(n) => obj::Integer(n).into(),
-        ast::Expression::Boolean(b) => obj::Boolean(b).into(),
+        ast::Expression::Integer(n) => obj::Object::Integer(n),
+        ast::Expression::Boolean(b) => obj::Object::Boolean(b),
         ast::Expression::Prefix { operator, right } => {
             let right = eval_expression(*right);
             if is_error_object(&right) {
@@ -100,7 +100,7 @@ fn eval_prefix_expression(op: ast::PrefixOperator, right: obj::Object) -> obj::O
 
 fn eval_bang_prefix_operator_expression(right: obj::Object) -> obj::Object {
     match right {
-        obj::Object::Boolean(b) => obj::Boolean(!b.0).into(),
+        obj::Object::Boolean(b) => obj::Object::Boolean(!b),
         obj::Object::Null => true_object(),
         _ => false_object(),
     }
@@ -108,7 +108,7 @@ fn eval_bang_prefix_operator_expression(right: obj::Object) -> obj::Object {
 
 fn eval_minus_prefix_operator_expression(right: obj::Object) -> obj::Object {
     match right {
-        obj::Object::Integer(obj::Integer(n)) => obj::Integer(-n).into(),
+        obj::Object::Integer(n) => obj::Object::Integer(-n).into(),
         r => new_error_object(&format!("unknown operator: -{}", r)),
     }
 }
@@ -129,35 +129,23 @@ fn eval_infix_expression(
     }
 }
 
-fn eval_integer_infix_expression(
-    op: ast::InfixOperator,
-    left: obj::Integer,
-    right: obj::Integer,
-) -> obj::Object {
-    let left = left.0;
-    let right = right.0;
+fn eval_integer_infix_expression(op: ast::InfixOperator, left: i64, right: i64) -> obj::Object {
     match op {
-        ast::InfixOperator::Add => obj::Integer(left + right).into(),
-        ast::InfixOperator::Sub => obj::Integer(left - right).into(),
-        ast::InfixOperator::Mul => obj::Integer(left * right).into(),
-        ast::InfixOperator::Div => obj::Integer(left / right).into(),
-        ast::InfixOperator::LT => obj::Boolean(left < right).into(),
-        ast::InfixOperator::GT => obj::Boolean(left > right).into(),
-        ast::InfixOperator::Eq => obj::Boolean(left == right).into(),
-        ast::InfixOperator::NotEq => obj::Boolean(left != right).into(),
+        ast::InfixOperator::Add => obj::Object::Integer(left + right),
+        ast::InfixOperator::Sub => obj::Object::Integer(left - right),
+        ast::InfixOperator::Mul => obj::Object::Integer(left * right),
+        ast::InfixOperator::Div => obj::Object::Integer(left / right),
+        ast::InfixOperator::LT => obj::Object::Boolean(left < right),
+        ast::InfixOperator::GT => obj::Object::Boolean(left > right),
+        ast::InfixOperator::Eq => obj::Object::Boolean(left == right),
+        ast::InfixOperator::NotEq => obj::Object::Boolean(left != right),
     }
 }
 
-fn eval_boolean_infix_expression(
-    op: ast::InfixOperator,
-    left: obj::Boolean,
-    right: obj::Boolean,
-) -> obj::Object {
-    let left = left.0;
-    let right = right.0;
+fn eval_boolean_infix_expression(op: ast::InfixOperator, left: bool, right: bool) -> obj::Object {
     match op {
-        ast::InfixOperator::Eq => obj::Boolean(left == right).into(),
-        ast::InfixOperator::NotEq => obj::Boolean(left != right).into(),
+        ast::InfixOperator::Eq => obj::Object::Boolean(left == right),
+        ast::InfixOperator::NotEq => obj::Object::Boolean(left != right),
         _ => new_error_object(&format!("unknown operator: {} {} {}", left, op, right)),
     }
 }
@@ -183,17 +171,17 @@ fn eval_if_expression(
 fn is_truthy(obj: obj::Object) -> bool {
     match obj {
         obj::Object::Null => false,
-        obj::Object::Boolean(b) => b.0,
+        obj::Object::Boolean(v) => v,
         _ => true,
     }
 }
 
 fn true_object() -> obj::Object {
-    obj::Boolean(true).into()
+    obj::Object::Boolean(true)
 }
 
 fn false_object() -> obj::Object {
-    obj::Boolean(false).into()
+    obj::Object::Boolean(false)
 }
 
 fn null_object() -> obj::Object {
@@ -239,7 +227,7 @@ mod tests {
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
-            assert_eq!(v, obj::Integer(expected).into());
+            assert_eq!(v, obj::Object::Integer(expected));
         }
     }
 
@@ -268,7 +256,7 @@ mod tests {
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
-            assert_eq!(v, obj::Boolean(expected).into());
+            assert_eq!(v, obj::Object::Boolean(expected));
         }
     }
 
@@ -284,20 +272,20 @@ mod tests {
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
-            assert_eq!(v, obj::Boolean(expected).into());
+            assert_eq!(v, obj::Object::Boolean(expected));
         }
     }
 
     #[test]
     fn test_if_else_expression() {
         let tests: Vec<(&str, obj::Object)> = vec![
-            ("if (true) { 10 }", obj::Integer(10).into()),
+            ("if (true) { 10 }", obj::Object::Integer(10)),
             ("if (false) { 10 }", null_object()),
-            ("if (1) { 10 }", obj::Integer(10).into()),
-            ("if (1 < 2) { 10 }", obj::Integer(10).into()),
+            ("if (1) { 10 }", obj::Object::Integer(10)),
+            ("if (1 < 2) { 10 }", obj::Object::Integer(10)),
             ("if (1 > 2) { 10 }", null_object()),
-            ("if (1 > 2) { 10 } else { 20 }", obj::Integer(20).into()),
-            ("if (1 < 2) { 10 } else { 20 }", obj::Integer(10).into()),
+            ("if (1 > 2) { 10 } else { 20 }", obj::Object::Integer(20)),
+            ("if (1 < 2) { 10 } else { 20 }", obj::Object::Integer(10)),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
@@ -308,11 +296,11 @@ mod tests {
     #[test]
     fn test_return_statements() {
         let tests: Vec<(&str, obj::Object)> = vec![
-            ("return 10;", obj::Integer(10).into()),
-            ("return 10; 9;", obj::Integer(10).into()),
-            ("return 2 * 5; 0", obj::Integer(10).into()),
-            ("9; return 2 * 5; 9", obj::Integer(10).into()),
-            ("9; return 2 * 5; 9", obj::Integer(10).into()),
+            ("return 10;", obj::Object::Integer(10)),
+            ("return 10; 9;", obj::Object::Integer(10)),
+            ("return 2 * 5; 0", obj::Object::Integer(10)),
+            ("9; return 2 * 5; 9", obj::Object::Integer(10)),
+            ("9; return 2 * 5; 9", obj::Object::Integer(10)),
             (
                 r#"
             if (10 > 1) {
@@ -322,7 +310,7 @@ mod tests {
                 return 1;
             }
             "#,
-                obj::Integer(10).into(),
+                obj::Object::Integer(10),
             ),
         ];
         for (input, expected) in tests {
@@ -365,12 +353,12 @@ mod tests {
     #[test]
     fn eval_let_statements() {
         let tests: Vec<(&str, obj::Object)> = vec![
-            ("let a = 5; a;", obj::Integer(5).into()),
-            ("let a = 5 * 5; a;", obj::Integer(25).into()),
-            ("let a = 5; let b = a; b;", obj::Integer(5).into()),
+            ("let a = 5; a;", obj::Object::Integer(5)),
+            ("let a = 5 * 5; a;", obj::Object::Integer(25)),
+            ("let a = 5; let b = a; b;", obj::Object::Integer(5)),
             (
                 "let a = 5; let b = a; let c = a + b + 5; c;",
-                obj::Integer(15).into(),
+                obj::Object::Integer(15),
             ),
         ];
         for (input, expected) in tests {
