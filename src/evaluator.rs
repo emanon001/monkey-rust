@@ -25,8 +25,35 @@ fn eval_expression(expr: ast::Expression) -> Object {
     match expr {
         ast::Expression::Integer(n) => Object::Integer(n),
         ast::Expression::Boolean(b) => Object::Boolean(b),
+        ast::Expression::Prefix { operator, right } => {
+            let right = eval_expression(*right);
+            eval_prefix_expression(operator, right)
+        }
         _ => Object::Null,
     }
+}
+
+fn eval_prefix_expression(op: ast::PrefixOperator, right: Object) -> Object {
+    match op {
+        ast::PrefixOperator::Bang => eval_bang_operator_expresion(right),
+        _ => Object::Null,
+    }
+}
+
+fn eval_bang_operator_expresion(right: Object) -> Object {
+    match right {
+        Object::Boolean(b) => Object::Boolean(!b),
+        Object::Null => true_object(),
+        _ => false_object(),
+    }
+}
+
+fn true_object() -> Object {
+    Object::Boolean(true)
+}
+
+fn false_object() -> Object {
+    Object::Boolean(false)
 }
 
 #[cfg(test)]
@@ -38,8 +65,8 @@ mod tests {
 
     #[test]
     fn eval_integer_expression() {
-        let cases = vec![("5", 5), ("10", 10)];
-        for (input, expected) in cases {
+        let tests = vec![("5", 5), ("10", 10)];
+        for (input, expected) in tests {
             let v = test_eval(input.into());
             test_integer_object(v, expected);
         }
@@ -47,8 +74,24 @@ mod tests {
 
     #[test]
     fn eval_boolean_expression() {
-        let cases = vec![("true", true), ("false", false)];
-        for (input, expected) in cases {
+        let tests = vec![("true", true), ("false", false)];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            test_boolean_object(v, expected);
+        }
+    }
+
+    #[test]
+    fn test_bang_operator() {
+        let tests = vec![
+            ("!true", false),
+            ("!false", true),
+            ("!5", false),
+            ("!!true", true),
+            ("!!false", false),
+            ("!!5", true),
+        ];
+        for (input, expected) in tests {
             let v = test_eval(input.into());
             test_boolean_object(v, expected);
         }
