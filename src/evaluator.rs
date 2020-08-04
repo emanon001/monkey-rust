@@ -364,6 +364,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn eval_let_statements() {
+        let tests: Vec<(&str, obj::Object)> = vec![
+            ("let a = 5; a;", obj::Integer(5).into()),
+            ("let a = 5 * 5; a;", obj::Integer(25).into()),
+            ("let a = 5; let b = a; b;", obj::Integer(5).into()),
+            (
+                "let a = 5; let b = a; let c = a + b + 5; c;",
+                obj::Integer(15).into(),
+            ),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
+        }
+    }
+
     // helpers
 
     fn test_eval(input: String) -> obj::Object {
