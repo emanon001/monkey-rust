@@ -2,11 +2,11 @@ use crate::ast::{self};
 use crate::object::{self as obj};
 
 pub fn eval(program: ast::Program) -> obj::Object {
-    let stmts = program.statements;
-    eval_program(stmts)
+    eval_program(program)
 }
 
-fn eval_program(stmts: Vec<ast::Statement>) -> obj::Object {
+fn eval_program(program: ast::Program) -> obj::Object {
+    let stmts = program.statements;
     let mut res = null_object();
     for s in stmts {
         res = eval_statement(s);
@@ -20,13 +20,14 @@ fn eval_program(stmts: Vec<ast::Statement>) -> obj::Object {
 fn eval_statement(stmt: ast::Statement) -> obj::Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr),
-        ast::Statement::Block(block) => eval_block_statements(block.statements),
+        ast::Statement::Block(block) => eval_block_statements(block),
         ast::Statement::Return(expr) => obj::Object::Return(Box::new(eval_expression(expr))),
         _ => null_object(),
     }
 }
 
-fn eval_block_statements(stmts: Vec<ast::Statement>) -> obj::Object {
+fn eval_block_statements(block: ast::BlockStatement) -> obj::Object {
+    let stmts = block.statements;
     let mut res = null_object();
     for s in stmts {
         res = eval_statement(s);
