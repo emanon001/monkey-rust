@@ -125,9 +125,6 @@ fn eval_infix_expression(
         (obj::Object::Boolean(l), obj::Object::Boolean(r)) => {
             eval_boolean_infix_expression(op, l, r)
         }
-        (l, r) if l.object_type() != r.object_type() => {
-            new_error_object(&format!("type mismatch: {} {} {}", l, op, r))
-        }
         (l, r) => new_error_object(&format!("unknown operator: {} {} {}", l, op, r)),
     }
 }
@@ -337,8 +334,8 @@ mod tests {
     #[test]
     fn test_error_handling() {
         let tests = vec![
-            ("5 + true;", "type mismatch: 5 + true"),
-            ("5 + true; 5;", "type mismatch: 5 + true"),
+            ("5 + true;", "unknown operator: 5 + true"),
+            ("5 + true; 5;", "unknown operator: 5 + true"),
             ("-true", "unknown operator: -true"),
             ("true + false", "unknown operator: true + false"),
             ("5; true + false; 5;", "unknown operator: true + false"),

@@ -11,19 +11,6 @@ pub enum Object {
     Error(String),
 }
 
-impl Object {
-    pub fn object_type(&self) -> String {
-        match self {
-            Object::Integer(_) => "Integer",
-            Object::Boolean(_) => "Boolean",
-            Object::Null => "Null",
-            Object::Return(_) => "Return",
-            Object::Error(_) => "Error",
-        }
-        .into()
-    }
-}
-
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
