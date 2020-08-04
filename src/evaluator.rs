@@ -1,8 +1,31 @@
 use crate::ast::{self};
 use crate::object::Object;
 
-pub fn eval(_: ast::Program) -> Object {
-    Object::Null
+pub fn eval(program: ast::Program) -> Object {
+    let stmts = program.statements;
+    eval_statements(stmts)
+}
+
+fn eval_statements(stmts: Vec<ast::Statement>) -> Object {
+    let mut res = Object::Null;
+    for s in stmts {
+        res = eval_statement(s);
+    }
+    res
+}
+
+fn eval_statement(stmt: ast::Statement) -> Object {
+    match stmt {
+        ast::Statement::Expression(expr) => eval_expression(expr),
+        _ => Object::Null,
+    }
+}
+
+fn eval_expression(expr: ast::Expression) -> Object {
+    match expr {
+        ast::Expression::Integer(n) => Object::Integer(n),
+        _ => Object::Null,
+    }
 }
 
 #[cfg(test)]
