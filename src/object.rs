@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{self};
 
 // object enum
@@ -54,5 +55,26 @@ impl std::convert::From<Boolean> for Object {
 impl fmt::Display for Boolean {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+// environment
+
+pub struct Environment {
+    table: HashMap<String, Object>,
+}
+
+impl Environment {
+    pub fn new() -> Self {
+        let table = HashMap::new();
+        Self { table }
+    }
+
+    pub fn get(&self, id: &str) -> Option<&Object> {
+        self.table.get(id)
+    }
+
+    pub fn insert(&mut self, id: String, value: Object) {
+        self.table.insert(id, value);
     }
 }
