@@ -1,3 +1,4 @@
+use crate::evaluator::eval;
 use crate::lexer::Lexer;
 use crate::parser::{self, Parser};
 use std::io::prelude::*;
@@ -27,7 +28,8 @@ impl Repl {
             let mut parser = Parser::new(lexer);
             match parser.parse() {
                 Ok(program) => {
-                    writer.write_fmt(format_args!("{}\n", program))?;
+                    let evaluated = eval(program);
+                    writer.write_fmt(format_args!("{}\n", evaluated))?;
                 }
                 Err(parser::Errors(e)) => {
                     Self::print_parse_error(&mut writer, e)?;
