@@ -35,16 +35,23 @@ fn eval_expression(expr: ast::Expression) -> Object {
 
 fn eval_prefix_expression(op: ast::PrefixOperator, right: Object) -> Object {
     match op {
-        ast::PrefixOperator::Bang => eval_bang_operator_expresion(right),
-        _ => Object::Null,
+        ast::PrefixOperator::Bang => eval_bang_prefix_operator_expression(right),
+        ast::PrefixOperator::Minus => eval_minus_prefix_operator_expression(right),
     }
 }
 
-fn eval_bang_operator_expresion(right: Object) -> Object {
+fn eval_bang_prefix_operator_expression(right: Object) -> Object {
     match right {
         Object::Boolean(b) => Object::Boolean(!b),
         Object::Null => true_object(),
         _ => false_object(),
+    }
+}
+
+fn eval_minus_prefix_operator_expression(right: Object) -> Object {
+    match right {
+        Object::Integer(n) => Object::Integer(-n),
+        _ => Object::Null,
     }
 }
 
@@ -65,7 +72,7 @@ mod tests {
 
     #[test]
     fn eval_integer_expression() {
-        let tests = vec![("5", 5), ("10", 10)];
+        let tests = vec![("5", 5), ("10", 10), ("-5", -5), ("-10", -10)];
         for (input, expected) in tests {
             let v = test_eval(input.into());
             test_integer_object(v, expected);
@@ -82,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bang_operator() {
+    fn test_bang_prefix_operator() {
         let tests = vec![
             ("!true", false),
             ("!false", true),
