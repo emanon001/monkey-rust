@@ -6,7 +6,7 @@ use std::fmt::{self};
 pub enum Object {
     Integer(Integer),
     Boolean(Boolean),
-    Null(Null),
+    Null,
 }
 
 impl fmt::Display for Object {
@@ -14,7 +14,7 @@ impl fmt::Display for Object {
         match self {
             Object::Integer(v) => write!(f, "{}", v),
             Object::Boolean(v) => write!(f, "{}", v),
-            Object::Null(v) => write!(f, "{}", v),
+            Object::Null => write!(f, "null"),
         }
     }
 }
@@ -50,21 +50,5 @@ impl std::convert::From<Boolean> for Object {
 impl fmt::Display for Boolean {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-// Null
-#[derive(Debug, PartialEq, Eq)]
-pub struct Null;
-
-impl std::convert::From<Null> for Object {
-    fn from(null: Null) -> Self {
-        Self::Null(null)
-    }
-}
-
-impl fmt::Display for Null {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "null")
     }
 }

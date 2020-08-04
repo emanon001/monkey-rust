@@ -27,7 +27,6 @@ pub enum Statement {
     },
     Return(Expression),
     Expression(Expression),
-    #[allow(dead_code)]
     Block(BlockStatement),
 }
 
@@ -69,6 +68,12 @@ impl fmt::Display for BlockStatement {
             write!(f, "{}", s)?
         }
         Ok(())
+    }
+}
+
+impl std::convert::From<BlockStatement> for Statement {
+    fn from(block: BlockStatement) -> Self {
+        Self::Block(block)
     }
 }
 

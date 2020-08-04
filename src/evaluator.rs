@@ -17,6 +17,7 @@ fn eval_statements(stmts: Vec<ast::Statement>) -> obj::Object {
 fn eval_statement(stmt: ast::Statement) -> obj::Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr),
+        ast::Statement::Block(block) => eval_statements(block.statements),
         _ => null_object(),
     }
 }
@@ -38,6 +39,11 @@ fn eval_expression(expr: ast::Expression) -> obj::Object {
             let right = eval_expression(*right);
             eval_infix_expression(operator, left, right)
         }
+        ast::Expression::If {
+            condition,
+            consequence,
+            alternative,
+        } => eval_if_expression(*condition, consequence, alternative),
         _ => null_object(),
     }
 }
@@ -52,7 +58,7 @@ fn eval_prefix_expression(op: ast::PrefixOperator, right: obj::Object) -> obj::O
 fn eval_bang_prefix_operator_expression(right: obj::Object) -> obj::Object {
     match right {
         obj::Object::Boolean(b) => obj::Boolean(!b.0).into(),
-        obj::Object::Null(_) => true_object(),
+        obj::Object::Null => true_object(),
         _ => false_object(),
     }
 }
@@ -113,6 +119,27 @@ fn eval_boolean_infix_expression(
     }
 }
 
+fn eval_if_expression(
+    condition: ast::Expression,
+    consequence: ast::BlockStatement,
+    alternative: ast::BlockStatement,
+) -> obj::Object {
+    let condition = eval_expression(condition);
+    if is_truthy(condition) {
+        eval_statement(consequence.into())
+    } else {
+        eval_statement(alternative.into())
+    }
+}
+
+fn is_truthy(obj: obj::Object) -> bool {
+    match obj {
+        obj::Object::Null => false,
+        obj::Object::Boolean(b) => b.0,
+        _ => true,
+    }
+}
+
 fn true_object() -> obj::Object {
     obj::Boolean(true).into()
 }
@@ -122,12 +149,12 @@ fn false_object() -> obj::Object {
 }
 
 fn null_object() -> obj::Object {
-    obj::Null.into()
+    obj::Object::Null
 }
 
 #[cfg(test)]
 mod tests {
-    use super::eval;
+    use super::{eval, null_object};
     use crate::lexer::Lexer;
     use crate::object::{self as obj};
     use crate::parser::parse;
@@ -153,7 +180,7 @@ mod tests {
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
-            test_integer_object(v, expected);
+            assert_eq!(v, obj::Integer(expected).into());
         }
     }
 
@@ -182,7 +209,7 @@ mod tests {
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
-            test_boolean_object(v, expected);
+            assert_eq!(v, obj::Boolean(expected).into());
         }
     }
 
@@ -198,7 +225,24 @@ mod tests {
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
-            test_boolean_object(v, expected);
+            assert_eq!(v, obj::Boolean(expected).into());
+        }
+    }
+
+    #[test]
+    fn test_if_else_expression() {
+        let tests: Vec<(&str, obj::Object)> = vec![
+            ("if (true) { 10 }", obj::Integer(10).into()),
+            ("if (false) { 10 }", null_object()),
+            ("if (1) { 10 }", obj::Integer(10).into()),
+            ("if (1 < 2) { 10 }", obj::Integer(10).into()),
+            ("if (1 > 2) { 10 }", null_object()),
+            ("if (1 > 2) { 10 } else { 20 }", obj::Integer(20).into()),
+            ("if (1 < 2) { 10 } else { 20 }", obj::Integer(10).into()),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
         }
     }
 
@@ -208,21 +252,7 @@ mod tests {
         let lexer = Lexer::new(input);
         match parse(lexer) {
             Ok(p) => eval(p),
-            Err(e) => panic!(e),
-        }
-    }
-
-    fn test_integer_object(obj: obj::Object, expected: i64) {
-        match obj {
-            obj::Object::Integer(n) => assert_eq!(n.0, expected),
-            _ => panic!("object is not Integer. got={:?}", obj),
-        }
-    }
-
-    fn test_boolean_object(obj: obj::Object, expected: bool) {
-        match obj {
-            obj::Object::Boolean(b) => assert_eq!(b.0, expected),
-            _ => panic!("object is not Boolean. got={:?}", obj),
+            Err(e) => panic!(format!("{}", e)),
         }
     }
 }
