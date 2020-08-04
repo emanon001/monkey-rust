@@ -354,6 +354,7 @@ mod tests {
                 "#,
                 "unknown operator: true + false",
             ),
+            ("foobar", "identifier not found: foobar"),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
