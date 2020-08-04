@@ -8,11 +8,6 @@ pub fn parse(lexer: Lexer) -> std::result::Result<ast::Program, Errors> {
     parser.parse()
 }
 
-struct Parser {
-    lexer: std::iter::Peekable<Lexer>,
-    current_token: Option<Token>,
-}
-
 #[derive(Debug, PartialEq, Eq, Copy, Clone, PartialOrd)]
 enum Precedence {
     Lowest,
@@ -37,6 +32,11 @@ impl std::error::Error for Errors {}
 
 // for inner parse
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+struct Parser {
+    lexer: std::iter::Peekable<Lexer>,
+    current_token: Option<Token>,
+}
 
 impl Parser {
     fn new(lexer: Lexer) -> Self {
