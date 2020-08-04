@@ -3,13 +3,16 @@ use crate::object::{self as obj};
 
 pub fn eval(program: ast::Program) -> obj::Object {
     let stmts = program.statements;
-    eval_statements(stmts)
+    eval_program(stmts)
 }
 
-fn eval_statements(stmts: Vec<ast::Statement>) -> obj::Object {
+fn eval_program(stmts: Vec<ast::Statement>) -> obj::Object {
     let mut res = null_object();
     for s in stmts {
         res = eval_statement(s);
+        if let obj::Object::Return(obj) = res {
+            return *obj;
+        }
     }
     res
 }
@@ -17,9 +20,21 @@ fn eval_statements(stmts: Vec<ast::Statement>) -> obj::Object {
 fn eval_statement(stmt: ast::Statement) -> obj::Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr),
-        ast::Statement::Block(block) => eval_statements(block.statements),
+        ast::Statement::Block(block) => eval_block_statements(block.statements),
+        ast::Statement::Return(expr) => obj::Object::Return(Box::new(eval_expression(expr))),
         _ => null_object(),
     }
+}
+
+fn eval_block_statements(stmts: Vec<ast::Statement>) -> obj::Object {
+    let mut res = null_object();
+    for s in stmts {
+        res = eval_statement(s);
+        if let obj::Object::Return(_) = res {
+            return res;
+        }
+    }
+    res
 }
 
 fn eval_expression(expr: ast::Expression) -> obj::Object {
@@ -245,6 +260,32 @@ mod tests {
         for (input, expected) in tests {
             let v = test_eval(input.into());
             assert_eq!(v, expected);
+        }
+    }
+
+    #[test]
+    fn test_return_statements() {
+        let tests: Vec<(&str, obj::Object)> = vec![
+            ("return 10;", obj::Integer(10).into()),
+            ("return 10; 9;", obj::Integer(10).into()),
+            ("return 2 * 5; 0", obj::Integer(10).into()),
+            ("9; return 2 * 5; 9", obj::Integer(10).into()),
+            ("9; return 2 * 5; 9", obj::Integer(10).into()),
+            (
+                r#"
+            if (10 > 1) {
+                if (10 > 1) {
+                    return 10;
+                }
+                return 1;
+            }
+            "#,
+                obj::Integer(10).into(),
+            ),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected.into());
         }
     }
 
