@@ -122,13 +122,15 @@ fn eval_boolean_infix_expression(
 fn eval_if_expression(
     condition: ast::Expression,
     consequence: ast::BlockStatement,
-    alternative: ast::BlockStatement,
+    alternative: Option<ast::BlockStatement>,
 ) -> obj::Object {
     let condition = eval_expression(condition);
     if is_truthy(condition) {
         eval_statement(consequence.into())
-    } else {
+    } else if let Some(alternative) = alternative {
         eval_statement(alternative.into())
+    } else {
+        null_object()
     }
 }
 

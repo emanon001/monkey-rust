@@ -299,11 +299,9 @@ impl Parser {
         let alternative = if self.peek_token() == Some(&Token::Else) {
             self.next();
             self.expect_peek_token_and_next(Token::LBrace)?;
-            self.parse_block_statement()?
+            Some(self.parse_block_statement()?)
         } else {
-            ast::BlockStatement {
-                statements: Vec::new(),
-            }
+            None
         };
         Ok(ast::Expression::If {
             condition: Box::new(condition),
@@ -725,6 +723,8 @@ mod tests {
                     _ => panic!("statement not `<expr>`. got={:?}", s),
                 };
                 // alternative
+                assert!(alternative.is_some());
+                let alternative = alternative.as_ref().unwrap();
                 assert_eq!(alternative.statements.len(), 1);
                 let s = &alternative.statements[0];
                 match s {

@@ -96,7 +96,7 @@ pub enum Expression {
     If {
         condition: Box<Expression>,
         consequence: BlockStatement,
-        alternative: BlockStatement,
+        alternative: Option<BlockStatement>,
     },
     Function(FunctionExpression),
     Call {
@@ -121,7 +121,14 @@ impl fmt::Display for Expression {
                 condition,
                 consequence,
                 alternative,
-            } => write!(f, "if {} {} else {}", condition, consequence, alternative),
+            } => {
+                write!(f, "if {} {{ {} }}", condition, consequence)?;
+                if let Some(alt) = alternative {
+                    write!(f, " else {{ {} }}", alt)
+                } else {
+                    Ok(())
+                }
+            }
             Expression::Function(func) => write!(f, "{}", func),
             Expression::Call {
                 function,
