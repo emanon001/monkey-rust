@@ -22,7 +22,7 @@ impl fmt::Display for Object {
 // object structs
 
 // Integer
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Integer(pub i64);
 
 impl std::convert::From<Integer> for Object {

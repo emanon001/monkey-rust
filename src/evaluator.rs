@@ -70,8 +70,11 @@ fn eval_infix_expression(
     right: obj::Object,
 ) -> obj::Object {
     match (left, right) {
-        (obj::Object::Integer(a), obj::Object::Integer(b)) => {
-            eval_integer_infix_expression(op, a, b)
+        (obj::Object::Integer(l), obj::Object::Integer(r)) => {
+            eval_integer_infix_expression(op, l, r)
+        }
+        (obj::Object::Boolean(l), obj::Object::Boolean(r)) => {
+            eval_boolean_infix_expression(op, l, r)
         }
         _ => null_object(),
     }
@@ -93,6 +96,20 @@ fn eval_integer_infix_expression(
         ast::InfixOperator::GT => obj::Boolean(left > right).into(),
         ast::InfixOperator::Eq => obj::Boolean(left == right).into(),
         ast::InfixOperator::NotEq => obj::Boolean(left != right).into(),
+    }
+}
+
+fn eval_boolean_infix_expression(
+    op: ast::InfixOperator,
+    left: obj::Boolean,
+    right: obj::Boolean,
+) -> obj::Object {
+    let left = left.0;
+    let right = right.0;
+    match op {
+        ast::InfixOperator::Eq => obj::Boolean(left == right).into(),
+        ast::InfixOperator::NotEq => obj::Boolean(left != right).into(),
+        _ => null_object(),
     }
 }
 
@@ -153,6 +170,15 @@ mod tests {
             ("1 != 1", false),
             ("1 == 2", false),
             ("1 != 2", true),
+            ("true == true", true),
+            ("false == false", true),
+            ("true == false", false),
+            ("true != false", true),
+            ("false != true", true),
+            ("(1 < 2) == true", true),
+            ("(1 < 2) == false", false),
+            ("(1 > 2) == true", false),
+            ("(1 > 2) == false", true),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
