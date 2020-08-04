@@ -68,7 +68,7 @@ mod tests {
     use super::eval;
     use crate::lexer::Lexer;
     use crate::object::Object;
-    use crate::parser::Parser;
+    use crate::parser::parse;
 
     #[test]
     fn eval_integer_expression() {
@@ -108,8 +108,7 @@ mod tests {
 
     fn test_eval(input: String) -> Object {
         let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-        match parser.parse() {
+        match parse(lexer) {
             Ok(p) => eval(p),
             Err(e) => panic!(e),
         }

@@ -3,13 +3,18 @@ use crate::lexer::Lexer;
 use crate::token::Token;
 use itertools::Itertools;
 
-pub struct Parser {
+pub fn parse(lexer: Lexer) -> std::result::Result<ast::Program, Errors> {
+    let mut parser = Parser::new(lexer);
+    parser.parse()
+}
+
+struct Parser {
     lexer: std::iter::Peekable<Lexer>,
     current_token: Option<Token>,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, PartialOrd)]
-pub enum Precedence {
+enum Precedence {
     Lowest,
     Equals,
     LessGreater,
@@ -18,9 +23,6 @@ pub enum Precedence {
     Prefix,
     Call,
 }
-
-// for inner parse
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Errors(pub Vec<String>);
@@ -33,8 +35,11 @@ impl std::fmt::Display for Errors {
 }
 impl std::error::Error for Errors {}
 
+// for inner parse
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 impl Parser {
-    pub fn new(lexer: Lexer) -> Self {
+    fn new(lexer: Lexer) -> Self {
         let mut iter = lexer.into_iter().peekable();
         let current_token = iter.next();
         Self {
@@ -43,7 +48,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> std::result::Result<ast::Program, Errors> {
+    fn parse(&mut self) -> std::result::Result<ast::Program, Errors> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
         while self.current_token().is_some() {
@@ -450,7 +455,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use super::{Parser, Result};
+    use super::{parse, Result};
     use crate::ast::{self};
     use crate::lexer::Lexer;
 
@@ -468,8 +473,7 @@ mod tests {
         ];
         for (input, id, value) in cases {
             let lexer = Lexer::new(input.into());
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             test_let_statement(s, id, value);
@@ -494,8 +498,7 @@ mod tests {
         ];
         for (input, expression) in cases {
             let lexer = Lexer::new(input.into());
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             test_return_statement(s, expression);
@@ -510,8 +513,7 @@ mod tests {
         "#
         .into();
         let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| test_identifier_expression(expr, "foobar"));
@@ -525,8 +527,7 @@ mod tests {
         "#
         .into();
         let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| test_integer_expression(expr, 5));
@@ -560,8 +561,7 @@ mod tests {
         ];
         for (input, op, r) in cases {
             let lexer = Lexer::new(input.into());
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             parse_expression_statement(s, |expr| match expr {
@@ -647,8 +647,7 @@ mod tests {
         ];
         for (input, l, op, r) in cases {
             let lexer = Lexer::new(input.into());
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             parse_expression_statement(s, |expr| match expr {
@@ -667,8 +666,7 @@ mod tests {
         if (x < y) { x }
         "#;
         let lexer = Lexer::new(input.into());
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -703,8 +701,7 @@ mod tests {
         if (x < y) { x } else { y }
         "#;
         let lexer = Lexer::new(input.into());
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -746,8 +743,7 @@ mod tests {
         fn(x, y) { x + y; }
         "#;
         let lexer = Lexer::new(input.into());
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -780,8 +776,7 @@ mod tests {
         add(1, 2 * 3, 4 + 5);
         "#;
         let lexer = Lexer::new(input.into());
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -855,8 +850,7 @@ mod tests {
         ];
         for (input, expected) in cases {
             let lexer = Lexer::new(input.into());
-            let mut parser = Parser::new(lexer);
-            let program = parser.parse()?;
+            let program = parse(lexer)?;
             let s = format!("{}", program);
             assert_eq!(s, expected);
         }

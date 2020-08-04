@@ -1,6 +1,6 @@
 use crate::evaluator::eval;
 use crate::lexer::Lexer;
-use crate::parser::{self, Parser};
+use crate::parser::{self, parse};
 use std::io::prelude::*;
 use std::io::{self, BufRead};
 
@@ -25,8 +25,7 @@ impl Repl {
         for l in reader.lines() {
             let l = l?;
             let lexer = Lexer::new(l);
-            let mut parser = Parser::new(lexer);
-            match parser.parse() {
+            match parse(lexer) {
                 Ok(program) => {
                     let evaluated = eval(program);
                     writer.write_fmt(format_args!("{}\n", evaluated))?;
