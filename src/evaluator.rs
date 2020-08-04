@@ -24,6 +24,7 @@ fn eval_statement(stmt: ast::Statement) -> Object {
 fn eval_expression(expr: ast::Expression) -> Object {
     match expr {
         ast::Expression::Integer(n) => Object::Integer(n),
+        ast::Expression::Boolean(b) => Object::Boolean(b),
         _ => Object::Null,
     }
 }
@@ -44,6 +45,15 @@ mod tests {
         }
     }
 
+    #[test]
+    fn eval_boolean_expression() {
+        let cases = vec![("true", true), ("false", false)];
+        for (input, expected) in cases {
+            let v = test_eval(input.into());
+            test_boolean_object(v, expected);
+        }
+    }
+
     // helpers
 
     fn test_eval(input: String) -> Object {
@@ -59,6 +69,13 @@ mod tests {
         match obj {
             Object::Integer(n) => assert_eq!(n, expected),
             _ => panic!("object is not Integer. got={:?}", obj),
+        }
+    }
+
+    fn test_boolean_object(obj: Object, expected: bool) {
+        match obj {
+            Object::Boolean(b) => assert_eq!(b, expected),
+            _ => panic!("object is not Boolean. got={:?}", obj),
         }
     }
 }
