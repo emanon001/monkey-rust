@@ -1,7 +1,7 @@
 use crate::ast::{self};
 use crate::object::{self as obj};
 
-pub fn eval(program: ast::Program) -> obj::Object {
+pub fn eval(program: ast::Program, env: &mut obj::Environment) -> obj::Object {
     eval_program(program)
 }
 
@@ -371,8 +371,9 @@ mod tests {
 
     fn test_eval(input: String) -> obj::Object {
         let lexer = Lexer::new(input);
+        let mut env = obj::Environment::new();
         match parse(lexer) {
-            Ok(p) => eval(p),
+            Ok(p) => eval(p, &mut env),
             Err(e) => panic!(format!("{}", e)),
         }
     }

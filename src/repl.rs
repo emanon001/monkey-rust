@@ -1,5 +1,6 @@
 use crate::evaluator::eval;
 use crate::lexer::Lexer;
+use crate::object::Environment;
 use crate::parser::{self, parse};
 use std::io::prelude::*;
 use std::io::{self, BufRead};
@@ -22,12 +23,13 @@ impl Repl {
         let mut writer = io::BufWriter::new(writer);
         writer.write_fmt(format_args!("{}", self.prompt))?;
         writer.flush()?;
+        let mut env = Environment::new();
         for l in reader.lines() {
             let l = l?;
             let lexer = Lexer::new(l);
             match parse(lexer) {
                 Ok(program) => {
-                    let evaluated = eval(program);
+                    let evaluated = eval(program, &mut env);
                     writer.write_fmt(format_args!("{}\n", evaluated))?;
                 }
                 Err(parser::Errors(e)) => {
