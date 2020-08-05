@@ -93,7 +93,7 @@ pub enum Expression {
     Function(FunctionExpression),
     Call {
         function: CallExpressionFunction,
-        arguments: Vec<Expression>,
+        args: Vec<Expression>,
     },
 }
 
@@ -122,11 +122,8 @@ impl fmt::Display for Expression {
                 }
             }
             Expression::Function(func) => write!(f, "{}", func),
-            Expression::Call {
-                function,
-                arguments,
-            } => {
-                let args = arguments.into_iter().join(", ");
+            Expression::Call { function, args } => {
+                let args = args.into_iter().join(", ");
                 write!(f, "{}({})", function, args)
             }
         }
@@ -142,6 +139,15 @@ impl std::convert::From<Identifier> for Expression {
 impl std::convert::From<FunctionExpression> for Expression {
     fn from(func: FunctionExpression) -> Self {
         Self::Function(func)
+    }
+}
+
+impl std::convert::From<CallExpressionFunction> for Expression {
+    fn from(call: CallExpressionFunction) -> Self {
+        match call {
+            CallExpressionFunction::Identifier(id) => id.into(),
+            CallExpressionFunction::Function(f) => f.into(),
+        }
     }
 }
 

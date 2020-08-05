@@ -82,6 +82,13 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         } => eval_if_expression(*condition, consequence, alternative, env),
         ast::Expression::Identifier(id) => eval_identifier_expression(id, env),
         ast::Expression::Function(expr) => eval_function_expression(expr, env),
+        ast::Expression::Call { function, args } => {
+            let function = eval_expression(function.into(), env);
+            if is_error_object(&function) {
+                return function;
+            }
+            null_object()
+        }
         _ => null_object(),
     }
 }

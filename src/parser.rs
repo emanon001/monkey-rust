@@ -356,11 +356,8 @@ impl Parser {
                 )
             }
         };
-        let arguments = self.parse_call_arguments()?;
-        Ok(ast::Expression::Call {
-            function,
-            arguments,
-        })
+        let args = self.parse_call_arguments()?;
+        Ok(ast::Expression::Call { function, args })
     }
 
     fn parse_call_arguments(&mut self) -> Result<Vec<ast::Expression>> {
@@ -780,26 +777,23 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
-            ast::Expression::Call {
-                function,
-                arguments,
-            } => {
+            ast::Expression::Call { function, args } => {
                 // function
                 match function {
                     ast::CallExpressionFunction::Identifier(id) => test_identifier(id, "add"),
                     _ => panic!("function is not identifier. got={:?}", function),
                 }
-                // arguments
-                assert_eq!(arguments.len(), 3);
-                test_integer_expression(&arguments[0], 1);
+                // args
+                assert_eq!(args.len(), 3);
+                test_integer_expression(&args[0], 1);
                 test_infix_expression(
-                    &arguments[1],
+                    &args[1],
                     ast::Expression::Integer(2),
                     ast::InfixOperator::Mul,
                     ast::Expression::Integer(3),
                 );
                 test_infix_expression(
-                    &arguments[2],
+                    &args[2],
                     ast::Expression::Integer(4),
                     ast::InfixOperator::Add,
                     ast::Expression::Integer(5),
