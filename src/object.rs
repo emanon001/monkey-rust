@@ -9,6 +9,7 @@ pub enum Object {
     Null,
     Return(Box<Object>),
     Error(String),
+    Let(Box<Object>),
 }
 
 impl fmt::Display for Object {
@@ -19,6 +20,7 @@ impl fmt::Display for Object {
             Object::Null => write!(f, "null"),
             Object::Return(v) => write!(f, "{}", v),
             Object::Error(v) => write!(f, "{}", v),
+            Object::Let(v) => write!(f, "{}", v),
         }
     }
 }

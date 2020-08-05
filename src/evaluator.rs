@@ -14,12 +14,14 @@ impl Environment {
         Self { table }
     }
 
-    pub fn get(&self, id: &str) -> Option<obj::Object> {
-        self.table.get(id).map(|v| v.clone())
+    pub fn get(&self, id: &ast::Identifier) -> Option<obj::Object> {
+        let id = id.to_string();
+        self.table.get(&id).map(|v| v.clone())
     }
 
-    pub fn insert(&mut self, id: String, value: obj::Object) {
-        self.table.insert(id, value);
+    pub fn set(&mut self, id: &ast::Identifier, value: &obj::Object) {
+        let id = id.to_string();
+        self.table.insert(id, value.clone());
     }
 }
 
@@ -66,8 +68,8 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> obj::Object {
             if is_error_object(&expr) {
                 return expr;
             }
-            env.insert(identifier.to_string(), expr);
-            null_object()
+            env.set(&identifier, &expr);
+            obj::Object::Let(Box::new(expr))
         }
     }
 }
@@ -205,8 +207,7 @@ fn eval_if_expression(
 }
 
 fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> obj::Object {
-    let id = &id.to_string();
-    if let Some(v) = env.get(id) {
+    if let Some(v) = env.get(&id) {
         v
     } else {
         new_error_object(&format!("identifier not found: {}", id))
