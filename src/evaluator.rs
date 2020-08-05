@@ -381,6 +381,26 @@ mod tests {
         }
     }
 
+    #[test]
+    fn eval_function_object() {
+        let input = r#"
+        fn(x) {
+            x + 2;
+        };
+        "#;
+        let v = test_eval(input.into());
+        match v {
+            Object::Function { params, body, .. } => {
+                // params
+                assert_eq!(params.len(), 1);
+                assert_eq!(params[0].0, "x");
+                // body
+                assert_eq!(body.to_string(), "(x + 2)");
+            }
+            _ => panic!("object is not function. got={:?}", v),
+        }
+    }
+
     // helpers
 
     fn test_eval(input: String) -> Object {
