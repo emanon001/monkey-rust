@@ -408,6 +408,37 @@ mod tests {
         }
     }
 
+    #[test]
+    fn eval_function_call_expression() {
+        let tests: Vec<(&str, Object)> = vec![
+            (
+                "let identity = fn(x) { x }; identity(5);",
+                Object::Integer(5),
+            ),
+            (
+                "let identity = fn(x) { return x; }; identity(5);",
+                Object::Integer(5),
+            ),
+            (
+                "let double = fn(x) { x * 2; }; double(5);",
+                Object::Integer(10),
+            ),
+            (
+                "let add = fn(x) { x + y; }; add(5, 5);",
+                Object::Integer(10),
+            ),
+            (
+                "let add = fn(x) { x + y; }; add(5 + 5, add(5 + 5));",
+                Object::Integer(20),
+            ),
+            ("fn(x) { x; }(5);", Object::Integer(5)),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
+        }
+    }
+
     // helpers
 
     fn test_eval(input: String) -> Object {
