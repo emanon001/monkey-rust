@@ -42,17 +42,29 @@ impl fmt::Display for Object {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Environment {
     store: HashMap<String, Object>,
+    outer: Option<Box<Environment>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         let store = HashMap::new();
-        Self { store }
+        Self { store, outer: None }
+    }
+
+    pub fn new_with_outer(outer: Environment) -> Self {
+        let mut env = Self::new();
+        env.outer = Some(Box::new(outer));
+        env
     }
 
     pub fn get(&self, id: &ast::Identifier) -> Option<Object> {
-        let id = id.to_string();
-        self.store.get(&id).map(|v| v.clone())
+        match self.store.get(&id.to_string()) {
+            Some(v) => Some(v.clone()),
+            None => match &self.outer {
+                Some(outer) => outer.get(&id),
+                None => None,
+            },
+        }
     }
 
     pub fn set(&mut self, id: &ast::Identifier, value: Object) {

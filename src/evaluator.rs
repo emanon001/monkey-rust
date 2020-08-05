@@ -13,8 +13,8 @@ fn eval_program(program: ast::Program, env: &mut Environment) -> Object {
     for s in stmts {
         res = eval_statement(s, env);
         match res {
-            Object::Return(o) => {
-                return *o;
+            Object::Return(_) => {
+                return unwrap_return_value(res);
             }
             Object::Error(_) => {
                 return res;
@@ -83,14 +83,31 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         ast::Expression::Identifier(id) => eval_identifier_expression(id, env),
         ast::Expression::Function(expr) => eval_function_expression(expr, env),
         ast::Expression::Call { function, args } => {
-            let function = eval_expression(function.into(), env);
-            if is_error_object(&function) {
-                return function;
+            let f = eval_expression(function.into(), env);
+            if is_error_object(&f) {
+                return f;
             }
-            null_object()
+            match eval_expressions(args, env) {
+                Ok(args) => eval_call_expression(f, args),
+                Err(v) => v,
+            }
         }
-        _ => null_object(),
     }
+}
+
+fn eval_expressions(
+    exprs: Vec<ast::Expression>,
+    env: &mut Environment,
+) -> Result<Vec<Object>, Object> {
+    let mut res = Vec::new();
+    for expr in exprs {
+        let v = eval_expression(expr, env);
+        if is_error_object(&v) {
+            return Err(v);
+        }
+        res.push(v);
+    }
+    Ok(res)
 }
 
 fn eval_prefix_expression(op: ast::PrefixOperator, right: Object) -> Object {
@@ -111,7 +128,7 @@ fn eval_bang_prefix_operator_expression(right: Object) -> Object {
 fn eval_minus_prefix_operator_expression(right: Object) -> Object {
     match right {
         Object::Integer(n) => Object::Integer(-n).into(),
-        r => new_error_object(&format!("unknown operator: -{}", r)),
+        r => new_error_object(&format!("unknown operator: `-{}`", r)),
     }
 }
 
@@ -119,7 +136,7 @@ fn eval_infix_expression(op: ast::InfixOperator, left: Object, right: Object) ->
     match (left, right) {
         (Object::Integer(l), Object::Integer(r)) => eval_integer_infix_expression(op, l, r),
         (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix_expression(op, l, r),
-        (l, r) => new_error_object(&format!("unknown operator: {} {} {}", l, op, r)),
+        (l, r) => new_error_object(&format!("unknown operator: `{} {} {}`", l, op, r)),
     }
 }
 
@@ -140,7 +157,7 @@ fn eval_boolean_infix_expression(op: ast::InfixOperator, left: bool, right: bool
     match op {
         ast::InfixOperator::Eq => Object::Boolean(left == right),
         ast::InfixOperator::NotEq => Object::Boolean(left != right),
-        _ => new_error_object(&format!("unknown operator: {} {} {}", left, op, right)),
+        _ => new_error_object(&format!("unknown operator: `{} {} {}`", left, op, right)),
     }
 }
 
@@ -185,7 +202,7 @@ fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> Obj
     if let Some(v) = env.get(&id) {
         v
     } else {
-        new_error_object(&format!("identifier not found: {}", id))
+        new_error_object(&format!("identifier not found: `{}`", id))
     }
 }
 
@@ -194,6 +211,35 @@ fn eval_function_expression(expr: ast::FunctionExpression, env: &Environment) ->
     let body = expr.body;
     let env = env.clone();
     Object::Function { params, body, env }
+}
+
+fn eval_call_expression(f: Object, args: Vec<Object>) -> Object {
+    match f {
+        Object::Function { body, params, env } => {
+            let mut env = extend_function_env(env, params, args);
+            unwrap_return_value(eval_block_statement(body, &mut env))
+        }
+        _ => new_error_object(&format!("not a function: `{}`", f)),
+    }
+}
+
+fn extend_function_env(
+    env: Environment,
+    params: Vec<ast::Identifier>,
+    args: Vec<Object>,
+) -> Environment {
+    let mut env = Environment::new_with_outer(env);
+    for (param, arg) in params.into_iter().zip(args) {
+        env.set(&param, arg);
+    }
+    env
+}
+
+fn unwrap_return_value(obj: Object) -> Object {
+    match obj {
+        Object::Return(v) => *v,
+        _ => obj,
+    }
 }
 
 fn is_truthy(obj: Object) -> bool {
@@ -350,14 +396,14 @@ mod tests {
     #[test]
     fn test_error_handling() {
         let tests = vec![
-            ("5 + true;", "unknown operator: 5 + true"),
-            ("5 + true; 5;", "unknown operator: 5 + true"),
-            ("-true", "unknown operator: -true"),
-            ("true + false", "unknown operator: true + false"),
-            ("5; true + false; 5;", "unknown operator: true + false"),
+            ("5 + true;", "unknown operator: `5 + true`"),
+            ("5 + true; 5;", "unknown operator: `5 + true`"),
+            ("-true", "unknown operator: `-true`"),
+            ("true + false", "unknown operator: `true + false`"),
+            ("5; true + false; 5;", "unknown operator: `true + false`"),
             (
                 "if (10 > 1) { true + false; }",
-                "unknown operator: true + false",
+                "unknown operator: `true + false`",
             ),
             (
                 r#"
@@ -368,9 +414,9 @@ mod tests {
                     return 1;
                 }
                 "#,
-                "unknown operator: true + false",
+                "unknown operator: `true + false`",
             ),
-            ("foobar", "identifier not found: foobar"),
+            ("foobar", "identifier not found: `foobar`"),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
@@ -431,12 +477,23 @@ mod tests {
                 Object::Integer(10),
             ),
             (
-                "let add = fn(x) { x + y; }; add(5, 5);",
+                "let add = fn(x, y) { x + y; }; add(5, 5);",
                 Object::Integer(10),
             ),
             (
-                "let add = fn(x) { x + y; }; add(5 + 5, add(5 + 5));",
+                "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
                 Object::Integer(20),
+            ),
+            (
+                // closure
+                r#"
+                let f = fn(x) {
+                    fn(y) { x + y };
+                };
+                let g = f(2);
+                g(2);
+                "#,
+                Object::Integer(4),
             ),
             ("fn(x) { x; }(5);", Object::Integer(5)),
         ];
