@@ -5,23 +5,23 @@ use std::collections::HashMap;
 // environment
 
 pub struct Environment {
-    table: HashMap<String, Object>,
+    store: HashMap<String, Object>,
 }
 
 impl Environment {
     pub fn new() -> Self {
-        let table = HashMap::new();
-        Self { table }
+        let store = HashMap::new();
+        Self { store }
     }
 
     pub fn get(&self, id: &ast::Identifier) -> Option<Object> {
         let id = id.to_string();
-        self.table.get(&id).map(|v| v.clone())
+        self.store.get(&id).map(|v| v.clone())
     }
 
-    pub fn set(&mut self, id: &ast::Identifier, value: &Object) {
+    pub fn set(&mut self, id: &ast::Identifier, value: Object) {
         let id = id.to_string();
-        self.table.insert(id, value.clone());
+        self.store.insert(id, value);
     }
 }
 
@@ -68,7 +68,7 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
             if is_error_object(&expr) {
                 return expr;
             }
-            env.set(&identifier, &expr);
+            env.set(&identifier, expr.clone());
             Object::Let(Box::new(expr))
         }
     }
