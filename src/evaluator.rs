@@ -1,6 +1,5 @@
 use crate::ast::{self};
 use crate::object::{Environment, Object};
-use std::collections::HashMap;
 
 // eval
 
@@ -82,6 +81,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
             alternative,
         } => eval_if_expression(*condition, consequence, alternative, env),
         ast::Expression::Identifier(id) => eval_identifier_expression(id, env),
+        ast::Expression::Function(expr) => eval_function_expression(expr, env),
         _ => null_object(),
     }
 }
@@ -180,6 +180,13 @@ fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> Obj
     } else {
         new_error_object(&format!("identifier not found: {}", id))
     }
+}
+
+fn eval_function_expression(expr: ast::FunctionExpression, env: &Environment) -> Object {
+    let params = expr.params;
+    let body = expr.body;
+    let env = env.clone();
+    Object::Function { params, body, env }
 }
 
 fn is_truthy(obj: Object) -> bool {
