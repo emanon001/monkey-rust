@@ -52,7 +52,6 @@ fn eval_program(program: ast::Program, env: &mut Environment) -> Object {
 fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr, env),
-        ast::Statement::Block(block) => eval_block_statements(block, env),
         ast::Statement::Return(expr) => {
             let v = eval_expression(expr, env);
             if is_error_object(&v) {
@@ -72,24 +71,6 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
             Object::Let(Box::new(expr))
         }
     }
-}
-
-fn eval_block_statements(block: ast::BlockStatement, env: &mut Environment) -> Object {
-    let stmts = block.statements;
-    let mut res = null_object();
-    for s in stmts {
-        res = eval_statement(s, env);
-        match &res {
-            Object::Return(_) => {
-                return res;
-            }
-            Object::Error(_) => {
-                return res;
-            }
-            _ => {}
-        }
-    }
-    res
 }
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
@@ -190,12 +171,30 @@ fn eval_if_expression(
         return condition;
     }
     if is_truthy(condition) {
-        eval_statement(consequence.into(), env)
+        eval_block_statement(consequence, env)
     } else if let Some(alternative) = alternative {
-        eval_statement(alternative.into(), env)
+        eval_block_statement(alternative, env)
     } else {
         null_object()
     }
+}
+
+fn eval_block_statement(block: ast::BlockStatement, env: &mut Environment) -> Object {
+    let stmts = block.statements;
+    let mut res = null_object();
+    for s in stmts {
+        res = eval_statement(s, env);
+        match &res {
+            Object::Return(_) => {
+                return res;
+            }
+            Object::Error(_) => {
+                return res;
+            }
+            _ => {}
+        }
+    }
+    res
 }
 
 fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> Object {
