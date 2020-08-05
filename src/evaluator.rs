@@ -2,14 +2,14 @@ use crate::ast::{self};
 use crate::object::{self as obj};
 
 pub fn eval(program: ast::Program, env: &mut obj::Environment) -> obj::Object {
-    eval_program(program)
+    eval_program(program, env)
 }
 
-fn eval_program(program: ast::Program) -> obj::Object {
+fn eval_program(program: ast::Program, env: &mut obj::Environment) -> obj::Object {
     let stmts = program.statements;
     let mut res = null_object();
     for s in stmts {
-        res = eval_statement(s);
+        res = eval_statement(s, env);
         match res {
             obj::Object::Return(o) => {
                 return *o;
@@ -23,12 +23,12 @@ fn eval_program(program: ast::Program) -> obj::Object {
     res
 }
 
-fn eval_statement(stmt: ast::Statement) -> obj::Object {
+fn eval_statement(stmt: ast::Statement, env: &mut obj::Environment) -> obj::Object {
     match stmt {
-        ast::Statement::Expression(expr) => eval_expression(expr),
-        ast::Statement::Block(block) => eval_block_statements(block),
+        ast::Statement::Expression(expr) => eval_expression(expr, env),
+        ast::Statement::Block(block) => eval_block_statements(block, env),
         ast::Statement::Return(expr) => {
-            let v = eval_expression(expr);
+            let v = eval_expression(expr, env);
             if is_error_object(&v) {
                 return v;
             }
@@ -38,11 +38,11 @@ fn eval_statement(stmt: ast::Statement) -> obj::Object {
     }
 }
 
-fn eval_block_statements(block: ast::BlockStatement) -> obj::Object {
+fn eval_block_statements(block: ast::BlockStatement, env: &mut obj::Environment) -> obj::Object {
     let stmts = block.statements;
     let mut res = null_object();
     for s in stmts {
-        res = eval_statement(s);
+        res = eval_statement(s, env);
         match &res {
             obj::Object::Return(_) => {
                 return res;
@@ -56,12 +56,12 @@ fn eval_block_statements(block: ast::BlockStatement) -> obj::Object {
     res
 }
 
-fn eval_expression(expr: ast::Expression) -> obj::Object {
+fn eval_expression(expr: ast::Expression, env: &mut obj::Environment) -> obj::Object {
     match expr {
         ast::Expression::Integer(n) => obj::Object::Integer(n),
         ast::Expression::Boolean(b) => obj::Object::Boolean(b),
         ast::Expression::Prefix { operator, right } => {
-            let right = eval_expression(*right);
+            let right = eval_expression(*right, env);
             if is_error_object(&right) {
                 return right;
             }
@@ -72,11 +72,11 @@ fn eval_expression(expr: ast::Expression) -> obj::Object {
             operator,
             right,
         } => {
-            let left = eval_expression(*left);
+            let left = eval_expression(*left, env);
             if is_error_object(&left) {
                 return left;
             }
-            let right = eval_expression(*right);
+            let right = eval_expression(*right, env);
             if is_error_object(&right) {
                 return right;
             }
@@ -86,7 +86,7 @@ fn eval_expression(expr: ast::Expression) -> obj::Object {
             condition,
             consequence,
             alternative,
-        } => eval_if_expression(*condition, consequence, alternative),
+        } => eval_if_expression(*condition, consequence, alternative, env),
         _ => null_object(),
     }
 }
@@ -154,15 +154,16 @@ fn eval_if_expression(
     condition: ast::Expression,
     consequence: ast::BlockStatement,
     alternative: Option<ast::BlockStatement>,
+    env: &mut obj::Environment,
 ) -> obj::Object {
-    let condition = eval_expression(condition);
+    let condition = eval_expression(condition, env);
     if is_error_object(&condition) {
         return condition;
     }
     if is_truthy(condition) {
-        eval_statement(consequence.into())
+        eval_statement(consequence.into(), env)
     } else if let Some(alternative) = alternative {
-        eval_statement(alternative.into())
+        eval_statement(alternative.into(), env)
     } else {
         null_object()
     }
