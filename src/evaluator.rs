@@ -1,11 +1,35 @@
 use crate::ast::{self};
 use crate::object::{self as obj};
+use std::collections::HashMap;
 
-pub fn eval(program: ast::Program, env: &mut obj::Environment) -> obj::Object {
+// environment
+
+pub struct Environment {
+    table: HashMap<String, obj::Object>,
+}
+
+impl Environment {
+    pub fn new() -> Self {
+        let table = HashMap::new();
+        Self { table }
+    }
+
+    pub fn get(&self, id: &str) -> Option<obj::Object> {
+        self.table.get(id).map(|v| v.clone())
+    }
+
+    pub fn insert(&mut self, id: String, value: obj::Object) {
+        self.table.insert(id, value);
+    }
+}
+
+// eval
+
+pub fn eval(program: ast::Program, env: &mut Environment) -> obj::Object {
     eval_program(program, env)
 }
 
-fn eval_program(program: ast::Program, env: &mut obj::Environment) -> obj::Object {
+fn eval_program(program: ast::Program, env: &mut Environment) -> obj::Object {
     let stmts = program.statements;
     let mut res = null_object();
     for s in stmts {
@@ -23,7 +47,7 @@ fn eval_program(program: ast::Program, env: &mut obj::Environment) -> obj::Objec
     res
 }
 
-fn eval_statement(stmt: ast::Statement, env: &mut obj::Environment) -> obj::Object {
+fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> obj::Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr, env),
         ast::Statement::Block(block) => eval_block_statements(block, env),
@@ -34,11 +58,21 @@ fn eval_statement(stmt: ast::Statement, env: &mut obj::Environment) -> obj::Obje
             }
             obj::Object::Return(Box::new(v))
         }
-        _ => null_object(),
+        ast::Statement::Let {
+            identifier,
+            expression,
+        } => {
+            let expr = eval_expression(expression, env);
+            if is_error_object(&expr) {
+                return expr;
+            }
+            env.insert(identifier.to_string(), expr);
+            null_object()
+        }
     }
 }
 
-fn eval_block_statements(block: ast::BlockStatement, env: &mut obj::Environment) -> obj::Object {
+fn eval_block_statements(block: ast::BlockStatement, env: &mut Environment) -> obj::Object {
     let stmts = block.statements;
     let mut res = null_object();
     for s in stmts {
@@ -56,7 +90,7 @@ fn eval_block_statements(block: ast::BlockStatement, env: &mut obj::Environment)
     res
 }
 
-fn eval_expression(expr: ast::Expression, env: &mut obj::Environment) -> obj::Object {
+fn eval_expression(expr: ast::Expression, env: &mut Environment) -> obj::Object {
     match expr {
         ast::Expression::Integer(n) => obj::Object::Integer(n),
         ast::Expression::Boolean(b) => obj::Object::Boolean(b),
@@ -87,6 +121,7 @@ fn eval_expression(expr: ast::Expression, env: &mut obj::Environment) -> obj::Ob
             consequence,
             alternative,
         } => eval_if_expression(*condition, consequence, alternative, env),
+        ast::Expression::Identifier(id) => eval_identifier_expression(id, env),
         _ => null_object(),
     }
 }
@@ -154,7 +189,7 @@ fn eval_if_expression(
     condition: ast::Expression,
     consequence: ast::BlockStatement,
     alternative: Option<ast::BlockStatement>,
-    env: &mut obj::Environment,
+    env: &mut Environment,
 ) -> obj::Object {
     let condition = eval_expression(condition, env);
     if is_error_object(&condition) {
@@ -166,6 +201,15 @@ fn eval_if_expression(
         eval_statement(alternative.into(), env)
     } else {
         null_object()
+    }
+}
+
+fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> obj::Object {
+    let id = &id.to_string();
+    if let Some(v) = env.get(id) {
+        v
+    } else {
+        new_error_object(&format!("identifier not found: {}", id))
     }
 }
 
@@ -202,7 +246,7 @@ fn is_error_object(o: &obj::Object) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{eval, null_object};
+    use super::{eval, null_object, Environment};
     use crate::lexer::Lexer;
     use crate::object::{self as obj};
     use crate::parser::parse;
@@ -372,7 +416,7 @@ mod tests {
 
     fn test_eval(input: String) -> obj::Object {
         let lexer = Lexer::new(input);
-        let mut env = obj::Environment::new();
+        let mut env = Environment::new();
         match parse(lexer) {
             Ok(p) => eval(p, &mut env),
             Err(e) => panic!(format!("{}", e)),

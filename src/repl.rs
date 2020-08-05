@@ -1,6 +1,5 @@
-use crate::evaluator::eval;
+use crate::evaluator::{eval, Environment};
 use crate::lexer::Lexer;
-use crate::object::Environment;
 use crate::parser::{self, parse};
 use std::io::prelude::*;
 use std::io::{self, BufRead};
