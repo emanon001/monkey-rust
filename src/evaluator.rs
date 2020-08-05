@@ -1,29 +1,6 @@
 use crate::ast::{self};
-use crate::object::Object;
+use crate::object::{Environment, Object};
 use std::collections::HashMap;
-
-// environment
-
-pub struct Environment {
-    store: HashMap<String, Object>,
-}
-
-impl Environment {
-    pub fn new() -> Self {
-        let store = HashMap::new();
-        Self { store }
-    }
-
-    pub fn get(&self, id: &ast::Identifier) -> Option<Object> {
-        let id = id.to_string();
-        self.store.get(&id).map(|v| v.clone())
-    }
-
-    pub fn set(&mut self, id: &ast::Identifier, value: Object) {
-        let id = id.to_string();
-        self.store.insert(id, value);
-    }
-}
 
 // eval
 
