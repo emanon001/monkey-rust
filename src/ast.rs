@@ -197,15 +197,14 @@ impl fmt::Display for InfixOperator {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FunctionExpression {
-    pub parameters: Vec<Identifier>,
+    pub params: Vec<Identifier>,
     pub body: BlockStatement,
 }
 
 impl fmt::Display for FunctionExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let params = self.parameters.iter().map(|p| p.to_string()).join(", ");
-        let body = &self.body;
-        write!(f, "fn ({}) {}", params, body)
+        let params = self.params.iter().join(", ");
+        write!(f, "fn ({}) {}", params, self.body)
     }
 }
 

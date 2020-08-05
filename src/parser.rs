@@ -316,13 +316,13 @@ impl Parser {
         // fn(<arguments>)
         self.expect_current_token(Token::Function)?;
         self.expect_peek_token_and_next(Token::LParen)?;
-        let parameters = self.parse_function_parameters()?;
+        let params = self.parse_function_parameters()?;
 
         // { <body> }
         self.expect_peek_token_and_next(Token::LBrace)?;
         let body = self.parse_block_statement()?;
 
-        Ok(ast::FunctionExpression { parameters, body }.into())
+        Ok(ast::FunctionExpression { params, body }.into())
     }
 
     fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
@@ -747,11 +747,11 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
-            ast::Expression::Function(ast::FunctionExpression { parameters, body }) => {
+            ast::Expression::Function(ast::FunctionExpression { params, body }) => {
                 // parameters
-                assert_eq!(parameters.len(), 2);
-                test_identifier(&parameters[0], "x");
-                test_identifier(&parameters[1], "y");
+                assert_eq!(params.len(), 2);
+                test_identifier(&params[0], "x");
+                test_identifier(&params[1], "y");
                 // body
                 assert_eq!(body.statements.len(), 1);
                 let s = &body.statements[0];
