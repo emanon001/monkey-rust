@@ -92,6 +92,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
                 Err(v) => v,
             }
         }
+        _ => new_error_object("not supported"),
     }
 }
 

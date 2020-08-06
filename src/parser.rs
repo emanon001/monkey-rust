@@ -48,6 +48,18 @@ impl Parser {
         }
     }
 
+    fn next(&mut self) {
+        self.current_token = self.lexer.next();
+    }
+
+    fn current_token(&self) -> Option<&Token> {
+        self.current_token.as_ref()
+    }
+
+    fn peek_token(&mut self) -> Option<&Token> {
+        self.lexer.peek()
+    }
+
     fn parse(&mut self) -> std::result::Result<ast::Program, Errors> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
@@ -63,18 +75,6 @@ impl Parser {
         } else {
             Err(Errors(errors))
         }
-    }
-
-    fn next(&mut self) {
-        self.current_token = self.lexer.next();
-    }
-
-    fn current_token(&self) -> Option<&Token> {
-        self.current_token.as_ref()
-    }
-
-    fn peek_token(&mut self) -> Option<&Token> {
-        self.lexer.peek()
     }
 
     fn parse_statement(&mut self) -> Result<ast::Statement> {
@@ -187,6 +187,7 @@ impl Parser {
             Some(Token::LParen) => self.parse_grouped_expression(),
             Some(Token::If) => self.parse_if_expression(),
             Some(Token::Function) => self.parse_function_expression(),
+            Some(Token::String(_)) => self.parse_string_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
         }
     }
@@ -379,6 +380,13 @@ impl Parser {
         }
         self.expect_peek_token_and_next(Token::RParen)?;
         Ok(arguments)
+    }
+
+    fn parse_string_expression(&mut self) -> Result<ast::Expression> {
+        match self.current_token() {
+            Some(Token::String(s)) => Ok(ast::Expression::String(s.clone())),
+            t => Err(Self::new_parse_error("string", t).into()),
+        }
     }
 
     fn current_prececence(&self) -> Precedence {
@@ -801,6 +809,27 @@ mod tests {
             }
             _ => panic!("expression not function. got={:?}", expr),
         });
+        Ok(())
+    }
+
+    #[test]
+    fn parse_string_expressions() -> Result<()> {
+        // (input, expected)
+        let tests = vec![
+            (r#""foobar""#, "foobar"),
+            (r#""foo bar""#, "foo bar"),
+            (r#""""#, ""),
+        ];
+        for (input, expected) in tests {
+            let lexer = Lexer::new(input.into());
+            let program = parse(lexer)?;
+            assert_eq!(program.statements.len(), 1);
+            let s = &program.statements[0];
+            parse_expression_statement(s, |expr| match expr {
+                ast::Expression::String(s) => assert_eq!(s, &expected),
+                _ => panic!("expression is not string. got={:?}", expr),
+            });
+        }
         Ok(())
     }
 
