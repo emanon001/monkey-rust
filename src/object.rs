@@ -62,7 +62,7 @@ impl Environment {
     }
 
     pub fn get(&self, id: &ast::Identifier) -> Option<Object> {
-        match self.store.get(&id.to_string()) {
+        match self.store.get(&id.0) {
             Some(v) => Some(v.clone()),
             None => match &self.outer {
                 Some(outer) => outer.get(&id),
