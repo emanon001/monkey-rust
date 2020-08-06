@@ -1,4 +1,5 @@
 use crate::ast::{self};
+use crate::builtins::{self};
 use crate::object::{Environment, Object};
 
 // eval
@@ -212,6 +213,8 @@ fn eval_block_statement(block: ast::BlockStatement, env: &mut Environment) -> Ob
 fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> Object {
     if let Some(v) = env.get(&id) {
         v
+    } else if let Some(f) = builtins::get(&id) {
+        Object::Builtin(f)
     } else {
         new_error_object(&format!("identifier not found: `{}`", id))
     }
@@ -230,6 +233,7 @@ fn eval_call_expression(f: Object, args: Vec<Object>) -> Object {
             let mut env = extend_function_env(env, params, args);
             unwrap_return_value(eval_block_statement(body, &mut env))
         }
+        Object::Builtin(f) => f(args),
         _ => new_error_object(&format!("not a function: `{}`", f)),
     }
 }
@@ -541,6 +545,26 @@ mod tests {
         for (input, expected) in tests {
             let v = test_eval(input.into());
             assert_eq!(v, Object::String(expected.into()));
+        }
+    }
+
+    #[test]
+    fn eval_builtin_function_expression() {
+        let tests = vec![
+            (r#"len("")"#, Object::Integer(0)),
+            (r#"len("four")"#, Object::Integer(4)),
+            (
+                r#"len(1)"#,
+                Object::Error("argument to `len` not supported, got `1`".into()),
+            ),
+            (
+                r#"len("one", "two")"#,
+                Object::Error("wrong number of arguments. got=2, want=1".into()),
+            ),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
         }
     }
 

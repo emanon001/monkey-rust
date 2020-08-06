@@ -19,6 +19,7 @@ pub enum Object {
         env: Environment,
     },
     String(String),
+    Builtin(fn(Vec<Object>) -> Object),
 }
 
 impl fmt::Display for Object {
@@ -35,6 +36,7 @@ impl fmt::Display for Object {
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
             Object::String(s) => write!(f, r#""{}""#, s),
+            Object::Builtin(_) => write!(f, "builtin"),
         }
     }
 }
