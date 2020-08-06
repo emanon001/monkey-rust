@@ -118,7 +118,7 @@ impl Lexer {
             match self.current_char() {
                 Some(ch) if ch == &'"' => break,
                 None => {
-                    let s = self.input[l..].into_iter().collect::<String>();
+                    let s = self.input[l - 1..].into_iter().collect::<String>();
                     return Err(s);
                 }
                 _ => {}
@@ -279,19 +279,6 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::Int("9".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
-
-        let input = r#"
-        "foobar"
-        "foo bar"
-        ""
-        "foo bar"#;
-        let lexer = Lexer::new(input.into());
-        let mut iter = lexer.into_iter();
-        assert_eq!(iter.next(), Some(Token::String("foobar".into())));
-        assert_eq!(iter.next(), Some(Token::String("foo bar".into())));
-        assert_eq!(iter.next(), Some(Token::String("".into())));
-        assert_eq!(iter.next(), Some(Token::Illegal("foo bar".into())));
-        assert_eq!(iter.next(), None);
     }
 
     #[test]
@@ -317,6 +304,30 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::Int("1".into())));
         assert_eq!(iter.next(), Some(Token::Plus));
         assert_eq!(iter.next(), Some(Token::Int("2".into())));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn string() {
+        let input = r#"
+        "foobar"
+        "foo bar"
+        ""
+        "foo bar"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::String("foobar".into())));
+        assert_eq!(iter.next(), Some(Token::String("foo bar".into())));
+        assert_eq!(iter.next(), Some(Token::String("".into())));
+        assert_eq!(iter.next(), Some(Token::Illegal("foo bar".into())));
+        assert_eq!(iter.next(), None);
+
+        let input = r#"
+        "foobar
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::Illegal("\"foobar".into())));
         assert_eq!(iter.next(), None);
     }
 }
