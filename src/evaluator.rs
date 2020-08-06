@@ -137,6 +137,7 @@ fn eval_infix_expression(op: ast::InfixOperator, left: Object, right: Object) ->
     match (left, right) {
         (Object::Integer(l), Object::Integer(r)) => eval_integer_infix_expression(op, l, r),
         (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix_expression(op, l, r),
+        (Object::String(l), Object::String(r)) => eval_string_infix_expression(op, l, r),
         (l, r) => new_error_object(&format!("unknown operator: `{} {} {}`", l, op, r)),
     }
 }
@@ -158,6 +159,13 @@ fn eval_boolean_infix_expression(op: ast::InfixOperator, left: bool, right: bool
     match op {
         ast::InfixOperator::Eq => Object::Boolean(left == right),
         ast::InfixOperator::NotEq => Object::Boolean(left != right),
+        _ => new_error_object(&format!("unknown operator: `{} {} {}`", left, op, right)),
+    }
+}
+
+fn eval_string_infix_expression(op: ast::InfixOperator, left: String, right: String) -> Object {
+    match op {
+        ast::InfixOperator::Add => Object::String(left + &right),
         _ => new_error_object(&format!("unknown operator: `{} {} {}`", left, op, right)),
     }
 }
@@ -510,6 +518,19 @@ mod tests {
             (r#""foobar""#, "foobar"),
             (r#""foo bar""#, "foo bar"),
             (r#""""#, ""),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, Object::String(expected.into()));
+        }
+    }
+
+    #[test]
+    fn eval_string_concatenation() {
+        let tests = vec![
+            (r#""Hello" + " " + "World!""#, "Hello World!"),
+            (r#""Hello" + """#, "Hello"),
+            (r#""" + "World!""#, "World!"),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
