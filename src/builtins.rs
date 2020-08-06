@@ -1,14 +1,21 @@
 use crate::ast::Identifier;
 use crate::object::Object;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 pub type BuiltinFunction = fn(Vec<Object>) -> Object;
 
+lazy_static! {
+    static ref FUNCTION_MAP: HashMap<&'static str, BuiltinFunction> = {
+        let mut map = HashMap::new();
+        map.insert("len", len as BuiltinFunction);
+        map
+    };
+}
+
 pub fn get(id: &Identifier) -> Option<BuiltinFunction> {
     let id: &str = &id.0;
-    match id {
-        "len" => Some(len),
-        _ => None,
-    }
+    FUNCTION_MAP.get(id).copied()
 }
 
 fn len(args: Vec<Object>) -> Object {
