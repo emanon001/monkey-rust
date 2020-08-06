@@ -15,26 +15,13 @@ impl Lexer {
         self.input.get(self.pos)
     }
 
-    fn is_digit(ch: &char) -> bool {
-        ch.is_ascii_digit()
+    fn peek_char(&self) -> Option<&char> {
+        self.input.get(self.pos + 1)
     }
 
-    fn is_letter(ch: &char) -> bool {
-        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == &'_'
-    }
-
-    fn new_identifier_token(ident: String) -> Token {
-        let s: &str = &ident;
-        match s {
-            "fn" => Token::Function,
-            "let" => Token::Let,
-            "true" => Token::True,
-            "false" => Token::False,
-            "if" => Token::If,
-            "else" => Token::Else,
-            "return" => Token::Return,
-            _ => Token::Identifier(ident),
-        }
+    // `next` is used in an Iterator
+    fn advance(&mut self) {
+        self.pos = std::cmp::min(self.pos + 1, self.input.len());
     }
 
     fn next_token(&mut self) -> Option<Token> {
@@ -85,15 +72,6 @@ impl Lexer {
         Some(token)
     }
 
-    // `next` is used in an Iterator
-    fn advance(&mut self) {
-        self.pos = std::cmp::min(self.pos + 1, self.input.len());
-    }
-
-    fn peek_char(&self) -> Option<&char> {
-        self.input.get(self.pos + 1)
-    }
-
     fn read_identifier(&mut self) -> String {
         let is_latter =
             |ch: Option<&char>| -> bool { ch.filter(|&ch| Self::is_letter(ch)).is_some() };
@@ -104,6 +82,20 @@ impl Lexer {
         }
         let r = self.pos + 1;
         self.input[l..r].into_iter().collect::<String>()
+    }
+
+    fn new_identifier_token(ident: String) -> Token {
+        let s: &str = &ident;
+        match s {
+            "fn" => Token::Function,
+            "let" => Token::Let,
+            "true" => Token::True,
+            "false" => Token::False,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "return" => Token::Return,
+            _ => Token::Identifier(ident),
+        }
     }
 
     fn read_number(&mut self) -> String {
@@ -150,6 +142,14 @@ impl Lexer {
         {
             self.advance();
         }
+    }
+
+    fn is_digit(ch: &char) -> bool {
+        ch.is_ascii_digit()
+    }
+
+    fn is_letter(ch: &char) -> bool {
+        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == &'_'
     }
 }
 
