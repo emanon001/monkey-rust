@@ -18,6 +18,7 @@ pub enum Object {
         body: ast::BlockStatement,
         env: Environment,
     },
+    String(String),
 }
 
 impl fmt::Display for Object {
@@ -33,6 +34,7 @@ impl fmt::Display for Object {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
+            Object::String(s) => write!(f, r#""{}""#, s),
         }
     }
 }

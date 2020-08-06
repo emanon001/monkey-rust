@@ -92,7 +92,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
                 Err(v) => v,
             }
         }
-        _ => new_error_object("not supported"),
+        ast::Expression::String(s) => Object::String(s),
     }
 }
 
@@ -336,7 +336,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bang_prefix_operator() {
+    fn eval_bang_prefix_operator() {
         let tests = vec![
             ("!true", false),
             ("!false", true),
@@ -352,7 +352,7 @@ mod tests {
     }
 
     #[test]
-    fn test_if_else_expression() {
+    fn eval_if_else_expression() {
         let tests: Vec<(&str, Object)> = vec![
             ("if (true) { 10 }", Object::Integer(10)),
             ("if (false) { 10 }", null_object()),
@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn test_return_statements() {
+    fn eval_return_statements() {
         let tests: Vec<(&str, Object)> = vec![
             ("return 10;", Object::Integer(10)),
             ("return 10; 9;", Object::Integer(10)),
@@ -395,7 +395,7 @@ mod tests {
     }
 
     #[test]
-    fn test_error_handling() {
+    fn error_handling() {
         let tests = vec![
             ("5 + true;", "unknown operator: `5 + true`"),
             ("5 + true; 5;", "unknown operator: `5 + true`"),
@@ -501,6 +501,19 @@ mod tests {
         for (input, expected) in tests {
             let v = test_eval(input.into());
             assert_eq!(v, expected);
+        }
+    }
+
+    #[test]
+    fn eval_string_expression() {
+        let tests = vec![
+            (r#""foobar""#, "foobar"),
+            (r#""foo bar""#, "foo bar"),
+            (r#""""#, ""),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, Object::String(expected.into()));
         }
     }
 
