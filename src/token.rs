@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Token {
     Assign,
     Asterisk,
@@ -25,5 +25,6 @@ pub enum Token {
     Return,
     Semicolon,
     Slash,
+    String(String),
     True,
 }

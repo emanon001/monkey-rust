@@ -66,6 +66,10 @@ impl Lexer {
             Some('>') => Token::GT,
             Some('{') => Token::LBrace,
             Some('}') => Token::RBrace,
+            Some('"') => match self.read_string() {
+                Ok(s) => Token::String(s),
+                Err(s) => Token::Illegal(s),
+            },
             Some(ch) => {
                 if Self::is_letter(ch) {
                     Self::new_identifier_token(self.read_identifier())
@@ -114,6 +118,30 @@ impl Lexer {
         self.input[l..r].into_iter().collect::<String>()
     }
 
+    fn read_string(&mut self) -> Result<String, String> {
+        assert!(self.current_char() == Some(&'"'));
+        let l = self.pos + 1;
+        loop {
+            self.advance();
+            match self.current_char() {
+                Some(ch) if ch == &'"' => break,
+                None => {
+                    let s = self.input[l..].into_iter().collect::<String>();
+                    return Err(s);
+                }
+                _ => {}
+            }
+        }
+        let r = self.pos;
+        let s = if l == r {
+            // ""
+            "".into()
+        } else {
+            self.input[l..r].into_iter().collect::<String>()
+        };
+        Ok(s)
+    }
+
     fn skip_whitespace(&mut self) {
         while self
             .current_char()
@@ -141,13 +169,13 @@ mod tests {
     #[test]
     fn iter() {
         let input = r#"
-let five = 5;
-let ten = 10;
-let add = fn(x, y) {
-    x + y;
-};
-let result = add(five, ten);
-"#;
+        let five = 5;
+        let ten = 10;
+        let add = fn(x, y) {
+            x + y;
+        };
+        let result = add(five, ten);
+        "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Let));
@@ -189,9 +217,9 @@ let result = add(five, ten);
         assert_eq!(iter.next(), None);
 
         let input = r#"
-!-/*5;
-5 < 10 > 5;
-"#;
+        !-/*5;
+        5 < 10 > 5;
+        "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Bang));
@@ -209,12 +237,12 @@ let result = add(five, ten);
         assert_eq!(iter.next(), None);
 
         let input = r#"
-if (5 < 10) {
-    return true;
-} else {
-    return false;
-}
-"#;
+        if (5 < 10) {
+            return true;
+        } else {
+            return false;
+        }
+        "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::If));
@@ -237,9 +265,9 @@ if (5 < 10) {
         assert_eq!(iter.next(), None);
 
         let input = r#"
-10 == 10;
-10 != 9;
-"#;
+        10 == 10;
+        10 != 9;
+        "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Int("10".into())));
@@ -251,13 +279,26 @@ if (5 < 10) {
         assert_eq!(iter.next(), Some(Token::Int("9".into())));
         assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
+
+        let input = r#"
+        "foobar"
+        "foo bar"
+        ""
+        "foo bar"#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::String("foobar".into())));
+        assert_eq!(iter.next(), Some(Token::String("foo bar".into())));
+        assert_eq!(iter.next(), Some(Token::String("".into())));
+        assert_eq!(iter.next(), Some(Token::Illegal("foo bar".into())));
+        assert_eq!(iter.next(), None);
     }
 
     #[test]
     fn ident_eof() {
         let input = r#"
         foo + bar
-"#;
+        "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Identifier("foo".into())));
@@ -270,7 +311,7 @@ if (5 < 10) {
     fn int_eof() {
         let input = r#"
         1 + 2
-"#;
+        "#;
         let lexer = Lexer::new(input.into());
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Int("1".into())));
