@@ -166,6 +166,8 @@ fn eval_boolean_infix_expression(op: ast::InfixOperator, left: bool, right: bool
 fn eval_string_infix_expression(op: ast::InfixOperator, left: String, right: String) -> Object {
     match op {
         ast::InfixOperator::Add => Object::String(left + &right),
+        ast::InfixOperator::Eq => Object::Boolean(left == right),
+        ast::InfixOperator::NotEq => Object::Boolean(left != right),
         _ => new_error_object(&format!("unknown operator: `{} {} {}`", left, op, right)),
     }
 }
@@ -336,6 +338,10 @@ mod tests {
             ("(1 < 2) == false", false),
             ("(1 > 2) == true", false),
             ("(1 > 2) == false", true),
+            (r#""foobar" == "foobar""#, true),
+            (r#""foobar" == "foo""#, false),
+            (r#""foo" == "foobar""#, false),
+            (r#""" == """#, true),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
@@ -344,7 +350,7 @@ mod tests {
     }
 
     #[test]
-    fn eval_bang_prefix_operator() {
+    fn eval_bang_expression() {
         let tests = vec![
             ("!true", false),
             ("!false", true),
