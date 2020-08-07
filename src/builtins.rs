@@ -21,25 +21,19 @@ pub fn get(id: &Identifier) -> Option<BuiltinFunction> {
 
 fn len(args: Vec<Object>) -> Object {
     if args.len() != 1 {
-        return Object::Error(format!(
-            "wrong number of arguments. got={}, want=1",
-            args.len()
-        ));
+        return new_wrong_number_arguments_error(args.len(), 1);
     }
 
     match &args[0] {
         Object::String(s) => Object::Integer(s.len() as i64),
         Object::Array(array) => Object::Integer(array.len() as i64),
-        o => Object::Error(format!("argument to `len` not supported, got `{}`", o)),
+        o => new_not_supported_error("len", o),
     }
 }
 
 fn first(args: Vec<Object>) -> Object {
     if args.len() != 1 {
-        return Object::Error(format!(
-            "wrong number of arguments. got={}, want=1",
-            args.len()
-        ));
+        return new_wrong_number_arguments_error(args.len(), 1);
     }
 
     match &args[0] {
@@ -47,8 +41,22 @@ fn first(args: Vec<Object>) -> Object {
             Some(f) => f.clone(),
             None => Object::Null,
         },
-        o => Object::Error(format!("argument to `len` not supported, got `{}`", o)),
+        o => new_not_supported_error("first", o),
     }
+}
+
+fn new_wrong_number_arguments_error(n: usize, expected: usize) -> Object {
+    Object::Error(format!(
+        "wrong number of arguments. got={}, want={}",
+        n, expected
+    ))
+}
+
+fn new_not_supported_error(fname: &str, o: &Object) -> Object {
+    Object::Error(format!(
+        "argument to `{}` not supported, got `{}`",
+        fname, o
+    ))
 }
 
 #[cfg(test)]
