@@ -72,7 +72,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         ast::Expression::Identifier(id) => eval_identifier_expression(id, env),
         ast::Expression::Function(expr) => eval_function_expression(expr, env),
         ast::Expression::Call { function, args } => eval_call_expression(function, args, env),
-        _ => null_object(),
+        ast::Expression::Index { left, index } => eval_index_expression(*left, *index, env),
     }
 }
 
@@ -286,6 +286,33 @@ fn extend_function_env(
     env
 }
 
+fn eval_index_expression(
+    left: ast::Expression,
+    index: ast::Expression,
+    env: &mut Environment,
+) -> Object {
+    let left = eval_expression(left, env);
+    if is_error_object(&left) {
+        return left;
+    }
+    let index = eval_expression(index, env);
+    if is_error_object(&index) {
+        return index;
+    }
+    match (left, index) {
+        (Object::Array(array), Object::Integer(idx)) => eval_array_index_expression(array, idx),
+        (l, _) => new_error_object(&format!("index operator not supported: `{}`", l)),
+    }
+}
+
+fn eval_array_index_expression(array: Vec<Object>, idx: i64) -> Object {
+    if idx < 0 || idx >= array.len() as i64 {
+        return null_object();
+    }
+    let idx = idx as usize;
+    array[idx].clone()
+}
+
 fn unwrap_return_value(obj: Object) -> Object {
     match obj {
         Object::Return(v) => *v,
@@ -429,6 +456,30 @@ mod tests {
                 Object::Integer(6),
             ])
         );
+    }
+
+    #[test]
+    fn eval_array_index_expressio() {
+        let tests = vec![
+            ("[1, 2, 3][0]", Object::Integer(1)),
+            ("[1, 2, 3][1]", Object::Integer(2)),
+            ("[1, 2, 3][2]", Object::Integer(3)),
+            ("let myArray = [1, 2, 3]; myArray[2];", Object::Integer(3)),
+            (
+                "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+                Object::Integer(6),
+            ),
+            (
+                "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];",
+                Object::Integer(2),
+            ),
+            ("[1, 2, 3][3]", Object::Null),
+            ("[1, 2, 3][-1]", Object::Null),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
+        }
     }
 
     #[test]
