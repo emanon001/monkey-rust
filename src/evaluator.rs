@@ -52,42 +52,18 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
     match expr {
-        ast::Expression::Integer(n) => Object::Integer(n),
-        ast::Expression::Boolean(b) => Object::Boolean(b),
-        ast::Expression::String(s) => Object::String(s),
-        ast::Expression::Array(exprs) => {
-            let mut elements = Vec::new();
-            for expr in exprs {
-                let v = eval_expression(expr, env);
-                if is_error_object(&v) {
-                    return v;
-                }
-                elements.push(v);
-            }
-            Object::Array(elements)
-        }
+        ast::Expression::Integer(n) => eval_integer_expression(n),
+        ast::Expression::Boolean(b) => eval_boolean_expression(b),
+        ast::Expression::String(s) => eval_string_expression(s),
+        ast::Expression::Array(exprs) => eval_array_expression(exprs, env),
         ast::Expression::Prefix { operator, right } => {
-            let right = eval_expression(*right, env);
-            if is_error_object(&right) {
-                return right;
-            }
-            eval_prefix_expression(operator, right)
+            eval_prefix_expression(operator, *right, env)
         }
         ast::Expression::Infix {
             left,
             operator,
             right,
-        } => {
-            let left = eval_expression(*left, env);
-            if is_error_object(&left) {
-                return left;
-            }
-            let right = eval_expression(*right, env);
-            if is_error_object(&right) {
-                return right;
-            }
-            eval_infix_expression(operator, left, right)
-        }
+        } => eval_infix_expression(operator, *left, *right, env),
         ast::Expression::If {
             condition,
             consequence,
@@ -95,16 +71,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         } => eval_if_expression(*condition, consequence, alternative, env),
         ast::Expression::Identifier(id) => eval_identifier_expression(id, env),
         ast::Expression::Function(expr) => eval_function_expression(expr, env),
-        ast::Expression::Call { function, args } => {
-            let f = eval_expression(function.into(), env);
-            if is_error_object(&f) {
-                return f;
-            }
-            match eval_expressions(args, env) {
-                Ok(args) => eval_call_expression(f, args),
-                Err(v) => v,
-            }
-        }
+        ast::Expression::Call { function, args } => eval_call_expression(function, args, env),
         _ => null_object(),
     }
 }
@@ -124,7 +91,39 @@ fn eval_expressions(
     Ok(res)
 }
 
-fn eval_prefix_expression(op: ast::PrefixOperator, right: Object) -> Object {
+fn eval_integer_expression(n: i64) -> Object {
+    Object::Integer(n)
+}
+
+fn eval_boolean_expression(b: bool) -> Object {
+    Object::Boolean(b)
+}
+
+fn eval_string_expression(s: String) -> Object {
+    Object::String(s)
+}
+
+fn eval_array_expression(exprs: Vec<ast::Expression>, env: &mut Environment) -> Object {
+    let mut elements = Vec::new();
+    for expr in exprs {
+        let v = eval_expression(expr, env);
+        if is_error_object(&v) {
+            return v;
+        }
+        elements.push(v);
+    }
+    Object::Array(elements)
+}
+
+fn eval_prefix_expression(
+    op: ast::PrefixOperator,
+    right: ast::Expression,
+    env: &mut Environment,
+) -> Object {
+    let right = eval_expression(right, env);
+    if is_error_object(&right) {
+        return right;
+    }
     match op {
         ast::PrefixOperator::Bang => eval_bang_prefix_operator_expression(right),
         ast::PrefixOperator::Minus => eval_minus_prefix_operator_expression(right),
@@ -146,7 +145,21 @@ fn eval_minus_prefix_operator_expression(right: Object) -> Object {
     }
 }
 
-fn eval_infix_expression(op: ast::InfixOperator, left: Object, right: Object) -> Object {
+fn eval_infix_expression(
+    op: ast::InfixOperator,
+    left: ast::Expression,
+    right: ast::Expression,
+    env: &mut Environment,
+) -> Object {
+    let left = eval_expression(left, env);
+    if is_error_object(&left) {
+        return left;
+    }
+    let right = eval_expression(right, env);
+    if is_error_object(&right) {
+        return right;
+    }
+
     match (left, right) {
         (Object::Integer(l), Object::Integer(r)) => eval_integer_infix_expression(op, l, r),
         (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix_expression(op, l, r),
@@ -239,14 +252,25 @@ fn eval_function_expression(expr: ast::FunctionExpression, env: &Environment) ->
     Object::Function { params, body, env }
 }
 
-fn eval_call_expression(f: Object, args: Vec<Object>) -> Object {
-    match f {
-        Object::Function { body, params, env } => {
-            let mut env = extend_function_env(env, params, args);
-            unwrap_return_value(eval_block_statement(body, &mut env))
-        }
-        Object::Builtin(f) => f(args),
-        _ => new_error_object(&format!("not a function: `{}`", f)),
+fn eval_call_expression(
+    f: ast::CallExpressionFunction,
+    args: Vec<ast::Expression>,
+    env: &mut Environment,
+) -> Object {
+    let f = eval_expression(f.into(), env);
+    if is_error_object(&f) {
+        return f;
+    }
+    match eval_expressions(args, env) {
+        Ok(args) => match f {
+            Object::Function { body, params, env } => {
+                let mut env = extend_function_env(env, params, args);
+                unwrap_return_value(eval_block_statement(body, &mut env))
+            }
+            Object::Builtin(f) => f(args),
+            _ => new_error_object(&format!("not a function: `{}`", f)),
+        },
+        Err(v) => v,
     }
 }
 
