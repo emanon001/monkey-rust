@@ -24,6 +24,8 @@ pub enum Token {
     RParen,             // )
     LBrace,             // {
     RBrace,             // }
+    LBracket,           // [
+    RBracket,           // [
     Comma,              // ,
     Semicolon,          // ;
     Illegal(String),

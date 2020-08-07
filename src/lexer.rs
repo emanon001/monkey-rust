@@ -53,6 +53,8 @@ impl Lexer {
             Some('>') => Token::GT,
             Some('{') => Token::LBrace,
             Some('}') => Token::RBrace,
+            Some('[') => Token::LBracket,
+            Some(']') => Token::RBracket,
             Some('"') => match self.read_string() {
                 Ok(s) => Token::String(s),
                 Err(s) => Token::Illegal(s),
@@ -320,6 +322,22 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::String("foo bar".into())));
         assert_eq!(iter.next(), Some(Token::String("".into())));
         assert_eq!(iter.next(), Some(Token::Illegal("\"foo bar".into())));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn bracket() {
+        let input = r#"
+        [1, 2];
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::LBracket));
+        assert_eq!(iter.next(), Some(Token::Int("1".into())));
+        assert_eq!(iter.next(), Some(Token::Comma));
+        assert_eq!(iter.next(), Some(Token::Int("2".into())));
+        assert_eq!(iter.next(), Some(Token::RBracket));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
     }
 }
