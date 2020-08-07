@@ -20,7 +20,6 @@ pub fn get(id: &Identifier) -> Option<BuiltinFunction> {
 }
 
 fn len(args: Vec<Object>) -> Object {
-    // len(o: String | Array) -> Integer
     if args.len() != 1 {
         return Object::Error(format!(
             "wrong number of arguments. got={}, want=1",
@@ -36,7 +35,6 @@ fn len(args: Vec<Object>) -> Object {
 }
 
 fn first(args: Vec<Object>) -> Object {
-    // len(o: String | Array) -> Integer
     if args.len() != 1 {
         return Object::Error(format!(
             "wrong number of arguments. got={}, want=1",
