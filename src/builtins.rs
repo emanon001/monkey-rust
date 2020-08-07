@@ -10,6 +10,7 @@ lazy_static! {
         let mut map = HashMap::new();
         map.insert("len", len as BuiltinFunction);
         map.insert("first", first as BuiltinFunction);
+        map.insert("last", last as BuiltinFunction);
         map
     };
 }
@@ -18,6 +19,8 @@ pub fn get(id: &Identifier) -> Option<BuiltinFunction> {
     let id: &str = &id.0;
     FUNCTION_MAP.get(id).copied()
 }
+
+// functions
 
 fn len(args: Vec<Object>) -> Object {
     if args.len() != 1 {
@@ -45,6 +48,22 @@ fn first(args: Vec<Object>) -> Object {
     }
 }
 
+fn last(args: Vec<Object>) -> Object {
+    if args.len() != 1 {
+        return new_wrong_number_arguments_error(args.len(), 1);
+    }
+
+    match &args[0] {
+        Object::Array(array) => match array.last() {
+            Some(f) => f.clone(),
+            None => Object::Null,
+        },
+        o => new_not_supported_error("last", o),
+    }
+}
+
+// helpers
+
 fn new_wrong_number_arguments_error(n: usize, expected: usize) -> Object {
     Object::Error(format!(
         "wrong number of arguments. got={}, want={}",
@@ -62,15 +81,12 @@ fn new_not_supported_error(fname: &str, o: &Object) -> Object {
 #[cfg(test)]
 mod tests {
     use crate::ast::Identifier;
-    use crate::builtins::get;
+    use crate::builtins::{get, BuiltinFunction};
     use crate::object::Object;
 
     #[test]
-    fn test_len() {
-        let len = get(&new_id("len"));
-        assert!(len.is_some());
-        let len = len.unwrap();
-
+    fn len() {
+        let len = test_get("len");
         // args, expected
         let tests = vec![
             (vec![new_string("")], new_integer(0)),
@@ -89,10 +105,8 @@ mod tests {
     }
 
     #[test]
-    fn test_first() {
-        let first = get(&new_id("first"));
-        assert!(first.is_some());
-        let first = first.unwrap();
+    fn first() {
+        let first = test_get("first");
 
         // args, expected
         let tests = vec![
@@ -105,6 +119,23 @@ mod tests {
         ];
         for (args, expected) in tests {
             assert_eq!(first(args), expected);
+        }
+    }
+
+    #[test]
+    fn last() {
+        let last = test_get("last");
+        // args, expected
+        let tests = vec![
+            (vec![new_array(Vec::new())], new_null()),
+            (vec![new_array(vec![new_string("a")])], new_string("a")),
+            (
+                vec![new_array(vec![new_integer(2), new_integer(4)])],
+                new_integer(4),
+            ),
+        ];
+        for (args, expected) in tests {
+            assert_eq!(last(args), expected);
         }
     }
 
@@ -128,5 +159,11 @@ mod tests {
 
     fn new_null() -> Object {
         Object::Null
+    }
+
+    fn test_get(id: &str) -> BuiltinFunction {
+        let f = get(&new_id(id));
+        assert!(f.is_some());
+        f.unwrap()
     }
 }
