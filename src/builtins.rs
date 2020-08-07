@@ -11,6 +11,7 @@ lazy_static! {
         map.insert("len", len as BuiltinFunction);
         map.insert("first", first as BuiltinFunction);
         map.insert("last", last as BuiltinFunction);
+        map.insert("rest", rest as BuiltinFunction);
         map
     };
 }
@@ -59,6 +60,24 @@ fn last(args: Vec<Object>) -> Object {
             None => Object::Null,
         },
         o => new_not_supported_error("last", o),
+    }
+}
+
+fn rest(args: Vec<Object>) -> Object {
+    if args.len() != 1 {
+        return new_wrong_number_arguments_error(args.len(), 1);
+    }
+
+    match &args[0] {
+        Object::Array(array) => {
+            let v: Vec<Object> = array.into_iter().skip(1).cloned().collect();
+            if v.is_empty() {
+                Object::Null
+            } else {
+                Object::Array(v)
+            }
+        }
+        o => new_not_supported_error("rest", o),
     }
 }
 
@@ -136,6 +155,31 @@ mod tests {
         ];
         for (args, expected) in tests {
             assert_eq!(last(args), expected);
+        }
+    }
+
+    #[test]
+    fn rest() {
+        let rest = test_get("rest");
+        // args, expected
+        let tests = vec![
+            (vec![new_array(Vec::new())], new_null()),
+            (vec![new_array(vec![new_string("a")])], new_null()),
+            (
+                vec![new_array(vec![new_integer(2), new_integer(4)])],
+                new_array(vec![new_integer(4)]),
+            ),
+            (
+                vec![new_array(vec![
+                    new_integer(2),
+                    new_integer(4),
+                    new_integer(5),
+                ])],
+                new_array(vec![new_integer(4), new_integer(5)]),
+            ),
+        ];
+        for (args, expected) in tests {
+            assert_eq!(rest(args), expected);
         }
     }
 
