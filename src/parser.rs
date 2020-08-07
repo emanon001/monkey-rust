@@ -177,8 +177,8 @@ impl Parser {
             .is_some()
             && precedence < self.peek_prececence()
         {
-            let (expr, skipped) = self.parse_infix(left)?;
-            if skipped {
+            let (expr, parsed) = self.parse_infix(left)?;
+            if !parsed {
                 return Ok(expr);
             }
             left = expr;
@@ -213,19 +213,19 @@ impl Parser {
             | Some(Token::NotEq) => {
                 self.next();
                 let expr = self.parse_infix_expression(left)?;
-                Ok((expr, false))
+                Ok((expr, true))
             }
             Some(Token::LParen) => {
                 self.next();
                 let expr = self.parse_call_expression(left)?;
-                Ok((expr, false))
+                Ok((expr, true))
             }
             Some(Token::LBracket) => {
                 self.next();
                 let expr = self.parse_index_expression(left)?;
-                Ok((expr, false))
+                Ok((expr, true))
             }
-            _ => return Ok((left, true)),
+            _ => return Ok((left, false)),
         }
     }
 
