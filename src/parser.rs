@@ -8,6 +8,8 @@ pub fn parse(lexer: Lexer) -> std::result::Result<ast::Program, Errors> {
     parser.parse()
 }
 
+// Precedence
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone, PartialOrd)]
 enum Precedence {
     Lowest,
@@ -17,7 +19,10 @@ enum Precedence {
     Product, // * or /
     Prefix,
     Call,
+    Index,
 }
+
+// Erros
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Errors(pub Vec<String>);
@@ -30,8 +35,11 @@ impl std::fmt::Display for Errors {
 }
 impl std::error::Error for Errors {}
 
+// Result
 // for inner parse
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+// Parser
 
 struct Parser {
     lexer: std::iter::Peekable<Lexer>,
@@ -212,6 +220,11 @@ impl Parser {
                 let expr = self.parse_call_expression(left)?;
                 Ok((expr, false))
             }
+            Some(Token::LBracket) => {
+                self.next();
+                let expr = self.parse_index_expression(left)?;
+                Ok((expr, false))
+            }
             _ => return Ok((left, true)),
         }
     }
@@ -340,6 +353,31 @@ impl Parser {
         Ok(ast::FunctionExpression { params, body }.into())
     }
 
+    fn parse_call_expression(&mut self, function: ast::Expression) -> Result<ast::Expression> {
+        let function = match function {
+            ast::Expression::Identifier(id) => ast::CallExpressionFunction::Identifier(id),
+            ast::Expression::Function(func) => ast::CallExpressionFunction::Function(func),
+            _ => {
+                return Err(
+                    format!("could not parse {:?} as call expression function", function).into(),
+                )
+            }
+        };
+        let args = self.parse_expression_list(Token::RParen)?;
+        Ok(ast::Expression::Call { function, args })
+    }
+
+    fn parse_index_expression(&mut self, left: ast::Expression) -> Result<ast::Expression> {
+        self.expect_current_token(Token::LBracket)?;
+        self.next();
+        let index = self.parse_expression(Precedence::Lowest)?;
+        self.expect_peek_token_and_next(Token::RBracket)?;
+        Ok(ast::Expression::Index {
+            left: Box::new(left),
+            index: Box::new(index),
+        })
+    }
+
     fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
         // ([<arg>, ...])
         self.expect_current_token(Token::LParen)?;
@@ -359,20 +397,6 @@ impl Parser {
         }
         self.expect_peek_token_and_next(Token::RParen)?;
         Ok(identifiers)
-    }
-
-    fn parse_call_expression(&mut self, function: ast::Expression) -> Result<ast::Expression> {
-        let function = match function {
-            ast::Expression::Identifier(id) => ast::CallExpressionFunction::Identifier(id),
-            ast::Expression::Function(func) => ast::CallExpressionFunction::Function(func),
-            _ => {
-                return Err(
-                    format!("could not parse {:?} as call expression function", function).into(),
-                )
-            }
-        };
-        let args = self.parse_expression_list(Token::RParen)?;
-        Ok(ast::Expression::Call { function, args })
     }
 
     fn parse_expression_list(&mut self, end: Token) -> Result<Vec<ast::Expression>> {
@@ -442,6 +466,7 @@ impl Parser {
             Some(Token::LT) | Some(Token::GT) => Precedence::LessGreater,
             Some(Token::Eq) | Some(Token::NotEq) => Precedence::Equals,
             Some(Token::LParen) => Precedence::Call,
+            Some(Token::LBracket) => Precedence::Index,
             _ => Precedence::Lowest,
         }
     }
@@ -927,6 +952,14 @@ mod tests {
             (
                 "add(a + b + c * d / f + g)",
                 "add((((a + b) + ((c * d) / f)) + g))",
+            ),
+            (
+                "a * [1, 2, 3, 4][b * c] * d",
+                "((a * ([1, 2, 3, 4][(b * c)])) * d)",
+            ),
+            (
+                "add(a * b[2], b[1], 2 * [1, 2][1])",
+                "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
             ),
         ];
         for (input, expected) in cases {
