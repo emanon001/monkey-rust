@@ -29,25 +29,48 @@ fn eval_program(program: ast::Program, env: &mut Environment) -> Object {
 fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
     match stmt {
         ast::Statement::Expression(expr) => eval_expression(expr, env),
-        ast::Statement::Return(expr) => {
-            let v = eval_expression(expr, env);
-            if v.is_error() {
-                return v;
-            }
-            Object::Return(Box::new(v))
-        }
+        ast::Statement::Return(expr) => eval_return_statement(expr, env),
         ast::Statement::Let {
             identifier,
             expression,
-        } => {
-            let expr = eval_expression(expression, env);
-            if expr.is_error() {
-                return expr;
+        } => eval_let_statement(identifier, expression, env),
+    }
+}
+
+fn eval_return_statement(expr: ast::Expression, env: &mut Environment) -> Object {
+    let v = eval_expression(expr, env);
+    if v.is_error() {
+        return v;
+    }
+    Object::Return(Box::new(v))
+}
+
+fn eval_let_statement(id: ast::Identifier, expr: ast::Expression, env: &mut Environment) -> Object {
+    match expr {
+        ast::Expression::Function(f) => eval_let_function_statement(id, f, env),
+        expr => {
+            let obj = eval_expression(expr, env);
+            if obj.is_error() {
+                return obj;
             }
-            env.set(&identifier, expr.clone());
-            Object::Let(Box::new(expr))
+            env.set(&id, obj.clone());
+            Object::Let(Box::new(obj))
         }
     }
+}
+
+fn eval_let_function_statement(
+    id: ast::Identifier,
+    f: ast::FunctionExpression,
+    env: &mut Environment,
+) -> Object {
+    // let <id> = <function>
+    let rf = eval_recursive_function_expression(id.clone(), f.clone(), env);
+    let mut fenv = env.clone();
+    fenv.set(&id, rf);
+    let f = eval_function_expression(f, &mut fenv);
+    env.set(&id, f.clone());
+    Object::Let(Box::new(f))
 }
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
@@ -252,6 +275,22 @@ fn eval_function_expression(expr: ast::FunctionExpression, env: &Environment) ->
     Object::Function { params, body, env }
 }
 
+fn eval_recursive_function_expression(
+    id: ast::Identifier,
+    expr: ast::FunctionExpression,
+    env: &Environment,
+) -> Object {
+    let params = expr.params;
+    let body = expr.body;
+    let env = env.clone();
+    Object::RecursiveFunction {
+        id,
+        params,
+        body,
+        env,
+    }
+}
+
 fn eval_call_expression(
     f: ast::CallExpressionFunction,
     args: Vec<ast::Expression>,
@@ -264,6 +303,26 @@ fn eval_call_expression(
     match eval_expressions(args, env) {
         Ok(args) => match f {
             Object::Function { body, params, env } => {
+                let mut env = extend_function_env(env, params, args);
+                unwrap_return_value(eval_block_statement(body, &mut env))
+            }
+            Object::RecursiveFunction {
+                id,
+                body,
+                params,
+                mut env,
+            } => {
+                // let f = fn(n) { if (n == 0) { 1 } else { n * f(n - 1) } };
+                //                                              ^^^^^^^^
+                env.set(
+                    &id,
+                    Object::RecursiveFunction {
+                        id: id.clone(),
+                        body: body.clone(),
+                        params: params.clone(),
+                        env: env.clone(),
+                    },
+                );
                 let mut env = extend_function_env(env, params, args);
                 unwrap_return_value(eval_block_statement(body, &mut env))
             }
@@ -662,6 +721,22 @@ mod tests {
             let v = test_eval(input.into());
             assert_eq!(v, expected);
         }
+    }
+
+    #[test]
+    fn eval_recursive_function() {
+        let input = r#"
+        let factorial = fn(n) {
+            if (n == 1) {
+                1
+            } else {
+                n * factorial(n - 1)
+            }
+        };
+        factorial(10);
+        "#;
+        let v = test_eval(input.into());
+        assert_eq!(v, Object::Integer(3628800));
     }
 
     // helpers

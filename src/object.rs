@@ -20,6 +20,12 @@ pub enum Object {
         body: ast::BlockStatement,
         env: Environment,
     },
+    RecursiveFunction {
+        id: ast::Identifier,
+        params: Vec<ast::Identifier>,
+        body: ast::BlockStatement,
+        env: Environment,
+    },
     Builtin(fn(Vec<Object>) -> Object),
 }
 
@@ -47,6 +53,10 @@ impl fmt::Display for Object {
             Object::Error(v) => write!(f, "{}", v),
             Object::Let(v) => write!(f, "{}", v),
             Object::Function { params, body, .. } => {
+                let params = params.iter().join(", ");
+                write!(f, "fn({}) {{\n{}\n}}", params, body)
+            }
+            Object::RecursiveFunction { params, body, .. } => {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
