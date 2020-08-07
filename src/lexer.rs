@@ -319,15 +319,7 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::String("foobar".into())));
         assert_eq!(iter.next(), Some(Token::String("foo bar".into())));
         assert_eq!(iter.next(), Some(Token::String("".into())));
-        assert_eq!(iter.next(), Some(Token::Illegal("foo bar".into())));
-        assert_eq!(iter.next(), None);
-
-        let input = r#"
-        "foobar
-        "#;
-        let lexer = Lexer::new(input.into());
-        let mut iter = lexer.into_iter();
-        assert_eq!(iter.next(), Some(Token::Illegal("\"foobar".into())));
+        assert_eq!(iter.next(), Some(Token::Illegal("\"foo bar".into())));
         assert_eq!(iter.next(), None);
     }
 }
