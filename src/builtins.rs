@@ -12,6 +12,7 @@ lazy_static! {
         map.insert("first", first as BuiltinFunction);
         map.insert("last", last as BuiltinFunction);
         map.insert("rest", rest as BuiltinFunction);
+        map.insert("push", push as BuiltinFunction);
         map
     };
 }
@@ -78,6 +79,21 @@ fn rest(args: Vec<Object>) -> Object {
             }
         }
         o => new_not_supported_error("rest", o),
+    }
+}
+
+fn push(args: Vec<Object>) -> Object {
+    if args.len() != 2 {
+        return new_wrong_number_arguments_error(args.len(), 2);
+    }
+
+    match (&args[0], &args[1]) {
+        (Object::Array(array), v) => {
+            let mut a = array.clone();
+            a.push(v.clone());
+            Object::Array(a)
+        }
+        (o, _) => new_not_supported_error("push", o),
     }
 }
 
@@ -180,6 +196,25 @@ mod tests {
         ];
         for (args, expected) in tests {
             assert_eq!(rest(args), expected);
+        }
+    }
+
+    #[test]
+    fn push() {
+        let push = test_get("push");
+        // args, expected
+        let tests = vec![
+            (
+                vec![new_array(Vec::new()), new_integer(1)],
+                new_array(vec![new_integer(1)]),
+            ),
+            (
+                vec![new_array(vec![new_string("a")]), new_string("b")],
+                new_array(vec![new_string("a"), new_string("b")]),
+            ),
+        ];
+        for (args, expected) in tests {
+            assert_eq!(push(args), expected);
         }
     }
 
