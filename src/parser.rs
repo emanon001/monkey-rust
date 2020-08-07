@@ -182,12 +182,13 @@ impl Parser {
         match self.current_token() {
             Some(Token::Identifier(_)) => self.parse_identifier_expression(),
             Some(Token::Int(_)) => self.parse_integer_expression(),
-            Some(Token::Bang) | Some(Token::Minus) => self.parse_prefix_expression(),
             Some(Token::True) | Some(Token::False) => self.parse_boolean_expression(),
+            Some(Token::String(_)) => self.parse_string_expression(),
+            Some(Token::LBracket) => self.parse_array_expression(),
+            Some(Token::Bang) | Some(Token::Minus) => self.parse_prefix_expression(),
             Some(Token::LParen) => self.parse_grouped_expression(),
             Some(Token::If) => self.parse_if_expression(),
             Some(Token::Function) => self.parse_function_expression(),
-            Some(Token::String(_)) => self.parse_string_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
         }
     }
@@ -236,6 +237,19 @@ impl Parser {
             Some(Token::False) => Ok(ast::Expression::Boolean(false)),
             t => Err(Self::new_parse_error("boolean", t).into()),
         }
+    }
+
+    fn parse_string_expression(&mut self) -> Result<ast::Expression> {
+        match self.current_token() {
+            Some(Token::String(s)) => Ok(ast::Expression::String(s.clone())),
+            t => Err(Self::new_parse_error("string", t).into()),
+        }
+    }
+
+    fn parse_array_expression(&mut self) -> Result<ast::Expression> {
+        self.expect_current_token(Token::LBracket)?;
+        let exprs = self.parse_expression_list(Token::RBracket)?;
+        Ok(ast::Expression::Array(exprs))
     }
 
     fn parse_prefix_expression(&mut self) -> Result<ast::Expression> {
@@ -357,36 +371,29 @@ impl Parser {
                 )
             }
         };
-        let args = self.parse_call_arguments()?;
+        let args = self.parse_expression_list(Token::RParen)?;
         Ok(ast::Expression::Call { function, args })
     }
 
-    fn parse_call_arguments(&mut self) -> Result<Vec<ast::Expression>> {
-        // ([<arg>, ...])
-        self.expect_current_token(Token::LParen)?;
-        if self.peek_token() == Some(&Token::RParen) {
+    fn parse_expression_list(&mut self, end: Token) -> Result<Vec<ast::Expression>> {
+        // <start>[<expr>, ...]<end>
+        if self.peek_token() == Some(&end) {
             self.next();
             return Ok(Vec::new());
         }
         self.next();
-        let mut arguments = Vec::new();
-        let arg = self.parse_expression(Precedence::Lowest)?;
-        arguments.push(arg);
-        while self.peek_token().filter(|&t| t == &Token::Comma).is_some() {
+        // <expr>, [<expr>, ...]
+        let mut res = Vec::new();
+        res.push(self.parse_expression(Precedence::Lowest)?);
+        while self.peek_token() == Some(&Token::Comma) {
             self.next();
             self.next();
-            let arg = self.parse_expression(Precedence::Lowest)?;
-            arguments.push(arg);
+            res.push(self.parse_expression(Precedence::Lowest)?);
         }
-        self.expect_peek_token_and_next(Token::RParen)?;
-        Ok(arguments)
-    }
+        // <end>
+        self.expect_peek_token_and_next(end)?;
 
-    fn parse_string_expression(&mut self) -> Result<ast::Expression> {
-        match self.current_token() {
-            Some(Token::String(s)) => Ok(ast::Expression::String(s.clone())),
-            t => Err(Self::new_parse_error("string", t).into()),
-        }
+        Ok(res)
     }
 
     fn current_prececence(&self) -> Precedence {
@@ -463,7 +470,7 @@ mod tests {
     use crate::lexer::Lexer;
 
     #[test]
-    fn parse_let_statements() -> Result<()> {
+    fn parse_let_statement() -> Result<()> {
         // (input, identifer, value)
         let cases = vec![
             ("let x = 5;", "x", ast::Expression::Integer(5)),
@@ -485,7 +492,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_return_statements() -> Result<()> {
+    fn parse_return_statement() -> Result<()> {
         // (input, expression)
         let cases = vec![
             ("return 5;", ast::Expression::Integer(5)),
@@ -538,7 +545,57 @@ mod tests {
     }
 
     #[test]
-    fn parse_prefix_expressions() -> Result<()> {
+    fn parse_string_expression() -> Result<()> {
+        // (input, expected)
+        let tests = vec![
+            (r#""foobar""#, "foobar"),
+            (r#""foo bar""#, "foo bar"),
+            (r#""""#, ""),
+        ];
+        for (input, expected) in tests {
+            let lexer = Lexer::new(input.into());
+            let program = parse(lexer)?;
+            assert_eq!(program.statements.len(), 1);
+            let s = &program.statements[0];
+            parse_expression_statement(s, |expr| match expr {
+                ast::Expression::String(s) => assert_eq!(s, &expected),
+                _ => panic!("expression is not string. got={:?}", expr),
+            });
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn parse_array_expression() -> Result<()> {
+        let input = r#"[1, 2 * 2, 3 + 3]"#;
+        let lexer = Lexer::new(input.into());
+        let program = parse(lexer)?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Array(v) => {
+                assert_eq!(v.len(), 3);
+                test_integer_expression(&v[0], 1);
+                test_infix_expression(
+                    &v[1],
+                    ast::Expression::Integer(2),
+                    ast::InfixOperator::Mul,
+                    ast::Expression::Integer(2),
+                );
+                test_infix_expression(
+                    &v[2],
+                    ast::Expression::Integer(3),
+                    ast::InfixOperator::Add,
+                    ast::Expression::Integer(3),
+                );
+            }
+            _ => panic!("expression is not array. got={:?}", expr),
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn parse_prefix_expression() -> Result<()> {
         // (input, operator, right)
         let cases = vec![
             (
@@ -578,7 +635,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_infix_expressions() -> Result<()> {
+    fn parse_infix_expression() -> Result<()> {
         // (input, left, operator, right)
         let cases = vec![
             (
@@ -809,27 +866,6 @@ mod tests {
             }
             _ => panic!("expression not function. got={:?}", expr),
         });
-        Ok(())
-    }
-
-    #[test]
-    fn parse_string_expressions() -> Result<()> {
-        // (input, expected)
-        let tests = vec![
-            (r#""foobar""#, "foobar"),
-            (r#""foo bar""#, "foo bar"),
-            (r#""""#, ""),
-        ];
-        for (input, expected) in tests {
-            let lexer = Lexer::new(input.into());
-            let program = parse(lexer)?;
-            assert_eq!(program.statements.len(), 1);
-            let s = &program.statements[0];
-            parse_expression_statement(s, |expr| match expr {
-                ast::Expression::String(s) => assert_eq!(s, &expected),
-                _ => panic!("expression is not string. got={:?}", expr),
-            });
-        }
         Ok(())
     }
 
