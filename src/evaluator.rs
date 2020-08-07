@@ -94,6 +94,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
             }
         }
         ast::Expression::String(s) => Object::String(s),
+        _ => null_object(),
     }
 }
 

@@ -75,6 +75,9 @@ impl fmt::Display for BlockStatement {
 pub enum Expression {
     Identifier(Identifier),
     Integer(i64),
+    Boolean(bool),
+    String(String),
+    Array(Vec<Expression>),
     Prefix {
         operator: PrefixOperator,
         right: Box<Expression>,
@@ -84,7 +87,6 @@ pub enum Expression {
         operator: InfixOperator,
         right: Box<Expression>,
     },
-    Boolean(bool),
     If {
         condition: Box<Expression>,
         consequence: BlockStatement,
@@ -95,7 +97,6 @@ pub enum Expression {
         function: CallExpressionFunction,
         args: Vec<Expression>,
     },
-    String(String),
 }
 
 impl fmt::Display for Expression {
@@ -103,13 +104,18 @@ impl fmt::Display for Expression {
         match self {
             Expression::Identifier(id) => write!(f, "{}", id),
             Expression::Integer(n) => write!(f, "{}", n),
+            Expression::Boolean(b) => write!(f, "{}", b),
+            Expression::String(s) => write!(f, r#""{}""#, s),
+            Expression::Array(v) => {
+                let s = v.iter().join(", ");
+                write!(f, "[{}]", s)
+            }
             Expression::Prefix { operator, right } => write!(f, "({}{})", operator, right),
             Expression::Infix {
                 left,
                 operator,
                 right,
             } => write!(f, "({} {} {})", left, operator, right),
-            Expression::Boolean(b) => write!(f, "{}", b),
             Expression::If {
                 condition,
                 consequence,
@@ -127,7 +133,6 @@ impl fmt::Display for Expression {
                 let args = args.into_iter().join(", ");
                 write!(f, "{}({})", function, args)
             }
-            Expression::String(s) => write!(f, r#""{}""#, s),
         }
     }
 }
