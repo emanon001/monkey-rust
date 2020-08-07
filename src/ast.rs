@@ -97,6 +97,10 @@ pub enum Expression {
         function: CallExpressionFunction,
         args: Vec<Expression>,
     },
+    Index {
+        left: Box<Expression>,
+        index: Box<Expression>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -133,6 +137,7 @@ impl fmt::Display for Expression {
                 let args = args.into_iter().join(", ");
                 write!(f, "{}({})", function, args)
             }
+            Expression::Index { left, index } => write!(f, "({}[{}])", left, index),
         }
     }
 }

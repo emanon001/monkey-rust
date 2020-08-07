@@ -870,6 +870,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_index_expression() -> Result<()> {
+        let input = r#"myArray[1 + 1]"#;
+        let lexer = Lexer::new(input.into());
+        let program = parse(lexer)?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Index { left, index } => {
+                test_identifier_expression(left, "myArray");
+                test_infix_expression(
+                    index,
+                    ast::Expression::Integer(1),
+                    ast::InfixOperator::Add,
+                    ast::Expression::Integer(1),
+                );
+            }
+            _ => panic!("expression is not array. got={:?}", expr),
+        });
+        Ok(())
+    }
+
+    #[test]
     fn parse_precedence() -> Result<()> {
         // (input, expected)
         let cases = vec![
