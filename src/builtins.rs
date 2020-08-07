@@ -55,11 +55,16 @@ fn first(args: Vec<Object>) -> Object {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::ast::Identifier;
+    use crate::builtins::get;
     use crate::object::Object;
 
     #[test]
     fn test_len() {
+        let len = get(&new_id("len"));
+        assert!(len.is_some());
+        let len = len.unwrap();
+
         // args, expected
         let tests = vec![
             (vec![new_string("")], new_integer(0)),
@@ -79,6 +84,10 @@ mod tests {
 
     #[test]
     fn test_first() {
+        let first = get(&new_id("first"));
+        assert!(first.is_some());
+        let first = first.unwrap();
+
         // args, expected
         let tests = vec![
             (vec![new_array(Vec::new())], new_null()),
@@ -94,6 +103,10 @@ mod tests {
     }
 
     // helpers
+
+    fn new_id(s: &str) -> Identifier {
+        Identifier(s.into())
+    }
 
     fn new_string(s: &str) -> Object {
         Object::String(s.into())
