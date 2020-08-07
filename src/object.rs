@@ -9,6 +9,8 @@ use std::fmt::{self};
 pub enum Object {
     Integer(i64),
     Boolean(bool),
+    String(String),
+    Array(Vec<Object>),
     Null,
     Return(Box<Object>),
     Error(String),
@@ -18,7 +20,6 @@ pub enum Object {
         body: ast::BlockStatement,
         env: Environment,
     },
-    String(String),
     Builtin(fn(Vec<Object>) -> Object),
 }
 
@@ -27,6 +28,11 @@ impl fmt::Display for Object {
         match self {
             Object::Integer(v) => write!(f, "{}", v),
             Object::Boolean(v) => write!(f, "{}", v),
+            Object::String(s) => write!(f, r#""{}""#, s),
+            Object::Array(v) => {
+                let s = v.iter().join(", ");
+                write!(f, "[{}]", s)
+            }
             Object::Null => write!(f, "null"),
             Object::Return(v) => write!(f, "{}", v),
             Object::Error(v) => write!(f, "{}", v),
@@ -35,7 +41,6 @@ impl fmt::Display for Object {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
-            Object::String(s) => write!(f, r#""{}""#, s),
             Object::Builtin(_) => write!(f, "builtin"),
         }
     }
