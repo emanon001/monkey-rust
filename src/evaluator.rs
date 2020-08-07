@@ -65,7 +65,7 @@ fn eval_let_function_statement(
     env: &mut Environment,
 ) -> Object {
     // let <id> = <function>
-    let rf = eval_recursive_function_expression(id.clone(), f.clone(), env);
+    let rf = eval_let_function_expression(id.clone(), f.clone(), env);
     let mut fenv = env.clone();
     fenv.set(&id, rf);
     let f = eval_function_expression(f, &mut fenv);
@@ -258,7 +258,7 @@ fn eval_block_statement(block: ast::BlockStatement, env: &mut Environment) -> Ob
     res
 }
 
-fn eval_identifier_expression(id: ast::Identifier, env: &mut Environment) -> Object {
+fn eval_identifier_expression(id: ast::Identifier, env: &Environment) -> Object {
     if let Some(v) = env.get(&id) {
         v
     } else if let Some(f) = builtins::get(&id) {
@@ -275,7 +275,7 @@ fn eval_function_expression(expr: ast::FunctionExpression, env: &Environment) ->
     Object::Function { params, body, env }
 }
 
-fn eval_recursive_function_expression(
+fn eval_let_function_expression(
     id: ast::Identifier,
     expr: ast::FunctionExpression,
     env: &Environment,
@@ -283,7 +283,7 @@ fn eval_recursive_function_expression(
     let params = expr.params;
     let body = expr.body;
     let env = env.clone();
-    Object::RecursiveFunction {
+    Object::LetFunction {
         id,
         params,
         body,
@@ -306,7 +306,7 @@ fn eval_call_expression(
                 let mut env = extend_function_env(env, params, args);
                 unwrap_return_value(eval_block_statement(body, &mut env))
             }
-            Object::RecursiveFunction {
+            Object::LetFunction {
                 id,
                 body,
                 params,
@@ -316,7 +316,7 @@ fn eval_call_expression(
                 //                                              ^^^^^^^^
                 env.set(
                     &id,
-                    Object::RecursiveFunction {
+                    Object::LetFunction {
                         id: id.clone(),
                         body: body.clone(),
                         params: params.clone(),

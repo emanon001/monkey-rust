@@ -20,7 +20,7 @@ pub enum Object {
         body: ast::BlockStatement,
         env: Environment,
     },
-    RecursiveFunction {
+    LetFunction {
         id: ast::Identifier,
         params: Vec<ast::Identifier>,
         body: ast::BlockStatement,
@@ -56,7 +56,7 @@ impl fmt::Display for Object {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
-            Object::RecursiveFunction { params, body, .. } => {
+            Object::LetFunction { params, body, .. } => {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
