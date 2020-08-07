@@ -54,6 +54,18 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
     match expr {
         ast::Expression::Integer(n) => Object::Integer(n),
         ast::Expression::Boolean(b) => Object::Boolean(b),
+        ast::Expression::String(s) => Object::String(s),
+        ast::Expression::Array(exprs) => {
+            let mut elements = Vec::new();
+            for expr in exprs {
+                let v = eval_expression(expr, env);
+                if is_error_object(&v) {
+                    return v;
+                }
+                elements.push(v);
+            }
+            Object::Array(elements)
+        }
         ast::Expression::Prefix { operator, right } => {
             let right = eval_expression(*right, env);
             if is_error_object(&right) {
@@ -93,7 +105,6 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
                 Err(v) => v,
             }
         }
-        ast::Expression::String(s) => Object::String(s),
         _ => null_object(),
     }
 }
@@ -355,6 +366,48 @@ mod tests {
     }
 
     #[test]
+    fn eval_string_expression() {
+        let tests = vec![
+            (r#""foobar""#, "foobar"),
+            (r#""foo bar""#, "foo bar"),
+            (r#""""#, ""),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, Object::String(expected.into()));
+        }
+    }
+
+    #[test]
+    fn eval_string_concatenation() {
+        let tests = vec![
+            (r#""Hello" + " " + "World!""#, "Hello World!"),
+            (r#""Hello" + """#, "Hello"),
+            (r#""" + "World!""#, "World!"),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, Object::String(expected.into()));
+        }
+    }
+
+    #[test]
+    fn eval_array_expression() {
+        let input = r#"
+        [1, 2 * 2, 3 + 3]
+        "#;
+        let v = test_eval(input.into());
+        assert_eq!(
+            v,
+            Object::Array(vec![
+                Object::Integer(1),
+                Object::Integer(4),
+                Object::Integer(6),
+            ])
+        );
+    }
+
+    #[test]
     fn eval_bang_expression() {
         let tests = vec![
             ("!true", false),
@@ -520,32 +573,6 @@ mod tests {
         for (input, expected) in tests {
             let v = test_eval(input.into());
             assert_eq!(v, expected);
-        }
-    }
-
-    #[test]
-    fn eval_string_expression() {
-        let tests = vec![
-            (r#""foobar""#, "foobar"),
-            (r#""foo bar""#, "foo bar"),
-            (r#""""#, ""),
-        ];
-        for (input, expected) in tests {
-            let v = test_eval(input.into());
-            assert_eq!(v, Object::String(expected.into()));
-        }
-    }
-
-    #[test]
-    fn eval_string_concatenation() {
-        let tests = vec![
-            (r#""Hello" + " " + "World!""#, "Hello World!"),
-            (r#""Hello" + """#, "Hello"),
-            (r#""" + "World!""#, "World!"),
-        ];
-        for (input, expected) in tests {
-            let v = test_eval(input.into());
-            assert_eq!(v, Object::String(expected.into()));
         }
     }
 
