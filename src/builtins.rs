@@ -19,6 +19,7 @@ pub fn get(id: &Identifier) -> Option<BuiltinFunction> {
 }
 
 fn len(args: Vec<Object>) -> Object {
+    // len(o: String | Array) -> Integer
     if args.len() != 1 {
         return Object::Error(format!(
             "wrong number of arguments. got={}, want=1",
@@ -28,6 +29,7 @@ fn len(args: Vec<Object>) -> Object {
 
     match &args[0] {
         Object::String(s) => Object::Integer(s.len() as i64),
+        Object::Array(array) => Object::Integer(array.len() as i64),
         o => Object::Error(format!("argument to `len` not supported, got `{}`", o)),
     }
 }
@@ -44,6 +46,12 @@ mod tests {
             (vec![new_string("")], new_integer(0)),
             (vec![new_string("abc")], new_integer(3)),
             (vec![new_string("abc def")], new_integer(7)),
+            (vec![new_array(Vec::new())], new_integer(0)),
+            (vec![new_array(vec![new_integer(1)])], new_integer(1)),
+            (
+                vec![new_array(vec![new_integer(1), new_integer(2)])],
+                new_integer(2),
+            ),
         ];
         for (args, expected) in tests {
             assert_eq!(len(args), expected);
@@ -58,5 +66,9 @@ mod tests {
 
     fn new_integer(n: i64) -> Object {
         Object::Integer(n)
+    }
+
+    fn new_array(a: Vec<Object>) -> Object {
+        Object::Array(a)
     }
 }
