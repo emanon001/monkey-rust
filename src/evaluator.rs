@@ -31,7 +31,7 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
         ast::Statement::Expression(expr) => eval_expression(expr, env),
         ast::Statement::Return(expr) => {
             let v = eval_expression(expr, env);
-            if is_error_object(&v) {
+            if v.is_error() {
                 return v;
             }
             Object::Return(Box::new(v))
@@ -41,7 +41,7 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
             expression,
         } => {
             let expr = eval_expression(expression, env);
-            if is_error_object(&expr) {
+            if expr.is_error() {
                 return expr;
             }
             env.set(&identifier, expr.clone());
@@ -83,7 +83,7 @@ fn eval_expressions(
     let mut res = Vec::new();
     for expr in exprs {
         let v = eval_expression(expr, env);
-        if is_error_object(&v) {
+        if v.is_error() {
             return Err(v);
         }
         res.push(v);
@@ -107,7 +107,7 @@ fn eval_array_expression(exprs: Vec<ast::Expression>, env: &mut Environment) -> 
     let mut elements = Vec::new();
     for expr in exprs {
         let v = eval_expression(expr, env);
-        if is_error_object(&v) {
+        if v.is_error() {
             return v;
         }
         elements.push(v);
@@ -121,7 +121,7 @@ fn eval_prefix_expression(
     env: &mut Environment,
 ) -> Object {
     let right = eval_expression(right, env);
-    if is_error_object(&right) {
+    if right.is_error() {
         return right;
     }
     match op {
@@ -152,11 +152,11 @@ fn eval_infix_expression(
     env: &mut Environment,
 ) -> Object {
     let left = eval_expression(left, env);
-    if is_error_object(&left) {
+    if left.is_error() {
         return left;
     }
     let right = eval_expression(right, env);
-    if is_error_object(&right) {
+    if right.is_error() {
         return right;
     }
 
@@ -205,7 +205,7 @@ fn eval_if_expression(
     env: &mut Environment,
 ) -> Object {
     let condition = eval_expression(condition, env);
-    if is_error_object(&condition) {
+    if condition.is_error() {
         return condition;
     }
     if is_truthy(condition) {
@@ -258,7 +258,7 @@ fn eval_call_expression(
     env: &mut Environment,
 ) -> Object {
     let f = eval_expression(f.into(), env);
-    if is_error_object(&f) {
+    if f.is_error() {
         return f;
     }
     match eval_expressions(args, env) {
@@ -292,11 +292,11 @@ fn eval_index_expression(
     env: &mut Environment,
 ) -> Object {
     let left = eval_expression(left, env);
-    if is_error_object(&left) {
+    if left.is_error() {
         return left;
     }
     let index = eval_expression(index, env);
-    if is_error_object(&index) {
+    if index.is_error() {
         return index;
     }
     match (left, index) {
@@ -342,13 +342,6 @@ fn null_object() -> Object {
 
 fn new_error_object(s: &str) -> Object {
     Object::Error(s.into())
-}
-
-fn is_error_object(o: &Object) -> bool {
-    match o {
-        Object::Error(_) => true,
-        _ => false,
-    }
 }
 
 #[cfg(test)]

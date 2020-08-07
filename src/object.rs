@@ -23,6 +23,15 @@ pub enum Object {
     Builtin(fn(Vec<Object>) -> Object),
 }
 
+impl Object {
+    pub fn is_error(&self) -> bool {
+        match self {
+            Self::Error(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
