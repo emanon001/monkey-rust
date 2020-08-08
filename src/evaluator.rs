@@ -740,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn eval_map_reduce() {
+    fn eval_array_map() {
         let input = r#"
         let map = fn(arr, f) {
             let iter = fn(arr, accumulated) {
@@ -766,6 +766,28 @@ mod tests {
                 Object::Integer(8)
             ])
         );
+    }
+
+    #[test]
+    fn eval_array_reduce() {
+        let input = r#"
+        let reduce = fn(arr, initial, f) {
+            let iter = fn(arr, result) {
+                if (len(arr) == 0) {
+                    result
+                } else {
+                    iter(rest(arr), f(result, first(arr)));
+                }
+            };
+            iter(arr, initial);
+        };
+        let sum = fn(arr) {
+            reduce(arr, 0, fn(initial, el) { initial + el });
+        };
+        sum([1, 2, 3, 4, 5]);
+        "#;
+        let v = test_eval(input.into());
+        assert_eq!(v, Object::Integer(15));
     }
 
     // helpers
