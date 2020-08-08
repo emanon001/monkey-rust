@@ -1,6 +1,7 @@
 use crate::ast::{self};
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::convert::{self};
 use std::fmt::{self};
 
 // object enum
@@ -11,6 +12,7 @@ pub enum Object {
     Boolean(bool),
     String(String),
     Array(Vec<Object>),
+    Hash(HashMap<HashKey, Object>),
     Null,
     Return(Box<Object>),
     Error(String),
@@ -41,17 +43,24 @@ impl Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Object::Integer(v) => write!(f, "{}", v),
-            Object::Boolean(v) => write!(f, "{}", v),
-            Object::String(s) => write!(f, r#""{}""#, s),
-            Object::Array(v) => {
-                let s = v.iter().join(", ");
+            Object::Integer(it) => write!(f, "{}", it),
+            Object::Boolean(it) => write!(f, "{}", it),
+            Object::String(it) => write!(f, r#""{}""#, it),
+            Object::Array(it) => {
+                let s = it.iter().join(", ");
                 write!(f, "[{}]", s)
             }
+            Object::Hash(it) => {
+                let s = it
+                    .into_iter()
+                    .map(|(k, v)| format!("{}:{}", k, v))
+                    .join(", ");
+                write!(f, "{{{}}}", s)
+            }
             Object::Null => write!(f, "null"),
-            Object::Return(v) => write!(f, "{}", v),
-            Object::Error(v) => write!(f, "{}", v),
-            Object::Let(v) => write!(f, "{}", v),
+            Object::Return(it) => write!(f, "{}", it),
+            Object::Error(it) => write!(f, "{}", it),
+            Object::Let(it) => write!(f, "{}", it),
             Object::Function { params, body, .. } => {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
@@ -61,6 +70,38 @@ impl fmt::Display for Object {
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
             Object::Builtin(_) => write!(f, "builtin"),
+        }
+    }
+}
+
+// HashKey
+
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub enum HashKey {
+    Integer(i64),
+    String(String),
+    Boolean(bool),
+}
+
+impl fmt::Display for HashKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HashKey::Integer(it) => write!(f, "{}", it),
+            HashKey::String(it) => write!(f, r#""{}""#, it),
+            HashKey::Boolean(it) => write!(f, "{}", it),
+        }
+    }
+}
+
+impl convert::TryFrom<Object> for HashKey {
+    type Error = String;
+
+    fn try_from(obj: Object) -> Result<Self, Self::Error> {
+        match obj {
+            Object::Integer(it) => Ok(Self::Integer(it)),
+            Object::String(it) => Ok(Self::String(it)),
+            Object::Boolean(it) => Ok(Self::Boolean(it)),
+            o => Err(format!("could not convert `{}` as HashKey", o)),
         }
     }
 }
