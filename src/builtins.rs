@@ -71,12 +71,11 @@ fn rest(args: Vec<Object>) -> Object {
 
     match &args[0] {
         Object::Array(array) => {
-            let v: Vec<Object> = array.into_iter().skip(1).cloned().collect();
-            if v.is_empty() {
-                Object::Null
-            } else {
-                Object::Array(v)
+            if array.is_empty() {
+                return Object::Null;
             }
+            let v: Vec<Object> = array.into_iter().skip(1).cloned().collect();
+            Object::Array(v)
         }
         o => new_not_supported_error("rest", o),
     }
@@ -180,7 +179,7 @@ mod tests {
         // args, expected
         let tests = vec![
             (vec![new_array(Vec::new())], new_null()),
-            (vec![new_array(vec![new_string("a")])], new_null()),
+            (vec![new_array(vec![new_string("a")])], new_array(vec![])),
             (
                 vec![new_array(vec![new_integer(2), new_integer(4)])],
                 new_array(vec![new_integer(4)]),

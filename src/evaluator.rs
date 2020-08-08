@@ -739,6 +739,35 @@ mod tests {
         assert_eq!(v, Object::Integer(3628800));
     }
 
+    #[test]
+    fn eval_map_reduce() {
+        let input = r#"
+        let map = fn(arr, f) {
+            let iter = fn(arr, accumulated) {
+                if (len(arr) == 0) {
+                    accumulated
+                } else {
+                    iter(rest(arr), push(accumulated, f(first(arr))));
+                }
+            };
+            iter(arr, []);
+        };
+        let a = [1, 2, 3, 4];
+        let double = fn(x) { x * 2 };
+        map(a, double);
+        "#;
+        let v = test_eval(input.into());
+        assert_eq!(
+            v,
+            Object::Array(vec![
+                Object::Integer(2),
+                Object::Integer(4),
+                Object::Integer(6),
+                Object::Integer(8)
+            ])
+        );
+    }
+
     // helpers
 
     fn test_eval(input: String) -> Object {
