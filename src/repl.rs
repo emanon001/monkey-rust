@@ -22,7 +22,7 @@ impl Repl {
     {
         let reader = io::BufReader::new(reader);
         let mut writer = io::BufWriter::new(writer);
-        writer.write_fmt(format_args!("{}", self.prompt))?;
+        write!(writer, "{}", self.prompt)?;
         writer.flush()?;
         let mut env = Environment::new();
         for l in reader.lines() {
@@ -34,14 +34,14 @@ impl Repl {
                     if let object::Object::Let(_) = evaluated {
                         // no output
                     } else {
-                        writer.write_fmt(format_args!("{}\n", evaluated))?;
+                        write!(writer, "{}\n", evaluated)?;
                     }
                 }
                 Err(parser::Errors(e)) => {
                     Self::print_parse_error(&mut writer, e)?;
                 }
             }
-            writer.write_fmt(format_args!("{}", self.prompt))?;
+            write!(writer, "{}", self.prompt)?;
             writer.flush()?;
         }
         Ok(())
@@ -51,9 +51,9 @@ impl Repl {
         writer: &mut io::BufWriter<W>,
         errors: Vec<String>,
     ) -> io::Result<()> {
-        writer.write_fmt(format_args!("parser errors:\n"))?;
+        write!(writer, "parser errors:\n")?;
         for e in errors {
-            writer.write_fmt(format_args!("\t{}\n", e))?;
+            write!(writer, "\t{}\n", e)?;
         }
         Ok(())
     }
