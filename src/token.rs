@@ -27,6 +27,7 @@ pub enum Token {
     LBracket,           // [
     RBracket,           // [
     Comma,              // ,
+    Colon,              // :
     Semicolon,          // ;
     Illegal(String),
 }

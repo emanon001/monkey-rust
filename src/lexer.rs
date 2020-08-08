@@ -34,6 +34,7 @@ impl Lexer {
                 }
                 _ => Token::Assign,
             },
+            Some(':') => Token::Colon,
             Some(';') => Token::Semicolon,
             Some('(') => Token::LParen,
             Some(')') => Token::RParen,
@@ -338,6 +339,21 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::Int("2".into())));
         assert_eq!(iter.next(), Some(Token::RBracket));
         assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn hash() {
+        let input = r#"
+        {"foo": "bar"}
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::LBrace));
+        assert_eq!(iter.next(), Some(Token::String("foo".into())));
+        assert_eq!(iter.next(), Some(Token::Colon));
+        assert_eq!(iter.next(), Some(Token::String("bar".into())));
+        assert_eq!(iter.next(), Some(Token::RBrace));
         assert_eq!(iter.next(), None);
     }
 }
