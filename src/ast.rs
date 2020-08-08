@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use std::collections::BTreeMap;
 use std::fmt::{self};
 
 // Program
@@ -19,7 +20,7 @@ impl fmt::Display for Program {
 
 // Statement
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub enum Statement {
     Let {
         identifier: Identifier,
@@ -44,7 +45,7 @@ impl fmt::Display for Statement {
 
 // Identifier
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct Identifier(pub String);
 
 impl fmt::Display for Identifier {
@@ -55,7 +56,7 @@ impl fmt::Display for Identifier {
 
 // BlockStatement
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct BlockStatement {
     pub statements: Vec<Statement>,
 }
@@ -71,13 +72,14 @@ impl fmt::Display for BlockStatement {
 
 // Expression
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub enum Expression {
     Identifier(Identifier),
     Integer(i64),
     Boolean(bool),
     String(String),
     Array(Vec<Expression>),
+    Hash(BTreeMap<Expression, Expression>),
     Prefix {
         operator: PrefixOperator,
         right: Box<Expression>,
@@ -113,6 +115,13 @@ impl fmt::Display for Expression {
             Expression::Array(v) => {
                 let s = v.iter().join(", ");
                 write!(f, "[{}]", s)
+            }
+            Expression::Hash(h) => {
+                let s = h
+                    .into_iter()
+                    .map(|(k, v)| format!("{}:{}", k, v))
+                    .join(", ");
+                write!(f, "{{{}}}", s)
             }
             Expression::Prefix { operator, right } => write!(f, "({}{})", operator, right),
             Expression::Infix {
@@ -165,7 +174,7 @@ impl std::convert::From<CallExpressionFunction> for Expression {
 
 // PrefixOperator
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum PrefixOperator {
     Bang,
     Minus,
@@ -183,7 +192,7 @@ impl fmt::Display for PrefixOperator {
 
 // InfixOperator
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum InfixOperator {
     Add,
     Sub,
@@ -213,7 +222,7 @@ impl fmt::Display for InfixOperator {
 
 // FunctionExpression
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct FunctionExpression {
     pub params: Vec<Identifier>,
     pub body: BlockStatement,
@@ -228,7 +237,7 @@ impl fmt::Display for FunctionExpression {
 
 // CallExpressionFunction
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub enum CallExpressionFunction {
     Identifier(Identifier),
     Function(FunctionExpression),

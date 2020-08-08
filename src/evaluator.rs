@@ -81,6 +81,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         ast::Expression::Boolean(b) => eval_boolean_expression(b),
         ast::Expression::String(s) => eval_string_expression(s),
         ast::Expression::Array(exprs) => eval_array_expression(exprs, env),
+        ast::Expression::Hash(_) => null_object(), // TODO: eval
         ast::Expression::Prefix { operator, right } => {
             eval_prefix_expression(operator, *right, env)
         }
