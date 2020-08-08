@@ -342,6 +342,7 @@ fn eval_call_expression(
             } => {
                 // let f = fn(n) { if (n == 0) { 1 } else { n * f(n - 1) } };
                 //                                              ^^^^^^^^
+                // set <id> in `env` for recursive calls
                 env.set(
                     &id,
                     Object::LetFunction {
