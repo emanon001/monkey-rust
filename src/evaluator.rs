@@ -1,6 +1,8 @@
 use crate::ast::{self};
 use crate::builtins::{self};
-use crate::object::{Environment, Object};
+use crate::object::{Environment, HashKey, Object};
+use std::collections::{BTreeMap, HashMap};
+use std::convert::TryFrom;
 
 // eval
 
@@ -77,11 +79,11 @@ fn eval_let_function_statement(
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
     match expr {
-        ast::Expression::Integer(n) => eval_integer_expression(n),
-        ast::Expression::Boolean(b) => eval_boolean_expression(b),
-        ast::Expression::String(s) => eval_string_expression(s),
-        ast::Expression::Array(exprs) => eval_array_expression(exprs, env),
-        ast::Expression::Hash(_) => null_object(), // TODO: eval
+        ast::Expression::Integer(it) => eval_integer_expression(it),
+        ast::Expression::Boolean(it) => eval_boolean_expression(it),
+        ast::Expression::String(it) => eval_string_expression(it),
+        ast::Expression::Array(it) => eval_array_expression(it, env),
+        ast::Expression::Hash(it) => eval_hash_expression(it, env),
         ast::Expression::Prefix { operator, right } => {
             eval_prefix_expression(operator, *right, env)
         }
@@ -139,6 +141,29 @@ fn eval_array_expression(exprs: Vec<ast::Expression>, env: &mut Environment) -> 
         elements.push(v);
     }
     Object::Array(elements)
+}
+
+fn eval_hash_expression(
+    map: BTreeMap<ast::Expression, ast::Expression>,
+    env: &mut Environment,
+) -> Object {
+    let mut hash = HashMap::new();
+    for (k, v) in map {
+        let key = eval_expression(k, env);
+        if key.is_error() {
+            return key;
+        }
+        let key = match HashKey::try_from(key) {
+            Ok(it) => it,
+            Err((_, o)) => return new_error_object(&format!("unusable as hash key: `{}`", o)),
+        };
+        let value = eval_expression(v, env);
+        if value.is_error() {
+            return value;
+        }
+        hash.insert(key, value);
+    }
+    Object::Hash(hash)
 }
 
 fn eval_prefix_expression(
@@ -410,8 +435,9 @@ fn new_error_object(s: &str) -> Object {
 mod tests {
     use super::{eval, null_object, Environment};
     use crate::lexer::Lexer;
-    use crate::object::Object;
+    use crate::object::{HashKey, Object};
     use crate::parser::parse;
+    use std::collections::HashMap;
 
     #[test]
     fn eval_integer_expression() {
@@ -535,6 +561,33 @@ mod tests {
             let v = test_eval(input.into());
             assert_eq!(v, expected);
         }
+    }
+
+    #[test]
+    fn eval_hash_expression() {
+        let input = r#"
+        let two = "two";
+        {
+            "one": 10 - 9,
+            two: 1 + 1,
+            "thr" + "ee": 6 / 2,
+            4: 4,
+            true: 5,
+            false: 6
+        }
+        "#;
+        let expected = vec![
+            (HashKey::String("one".into()), new_int(1)),
+            (HashKey::String("two".into()), new_int(2)),
+            (HashKey::String("three".into()), new_int(3)),
+            (HashKey::Integer(4), new_int(4)),
+            (HashKey::Boolean(true), new_int(5)),
+            (HashKey::Boolean(false), new_int(6)),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let v = test_eval(input.into());
+        assert_eq!(v, Object::Hash(expected));
     }
 
     #[test]
@@ -820,5 +873,9 @@ mod tests {
             Ok(p) => eval(p, &mut env),
             Err(e) => panic!(format!("{}", e)),
         }
+    }
+
+    fn new_int(n: i64) -> Object {
+        Object::Integer(n)
     }
 }

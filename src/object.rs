@@ -53,7 +53,7 @@ impl fmt::Display for Object {
             Object::Hash(it) => {
                 let s = it
                     .into_iter()
-                    .map(|(k, v)| format!("{}:{}", k, v))
+                    .map(|(k, v)| format!("{}: {}", k, v))
                     .join(", ");
                 write!(f, "{{{}}}", s)
             }
@@ -94,14 +94,14 @@ impl fmt::Display for HashKey {
 }
 
 impl convert::TryFrom<Object> for HashKey {
-    type Error = String;
+    type Error = (String, Object);
 
     fn try_from(obj: Object) -> Result<Self, Self::Error> {
         match obj {
             Object::Integer(it) => Ok(Self::Integer(it)),
             Object::String(it) => Ok(Self::String(it)),
             Object::Boolean(it) => Ok(Self::Boolean(it)),
-            o => Err(format!("could not convert `{}` as HashKey", o)),
+            o => Err((format!("could not convert `{}` as HashKey", o), o)),
         }
     }
 }

@@ -119,7 +119,7 @@ impl fmt::Display for Expression {
             Expression::Hash(h) => {
                 let s = h
                     .into_iter()
-                    .map(|(k, v)| format!("{}:{}", k, v))
+                    .map(|(k, v)| format!("{}: {}", k, v))
                     .join(", ");
                 write!(f, "{{{}}}", s)
             }
