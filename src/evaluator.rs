@@ -65,9 +65,11 @@ fn eval_let_function_statement(
     env: &mut Environment,
 ) -> Object {
     // let <id> = <function>
+    // set <id> in `env` for recursive calls
     let rf = eval_let_function_expression(id.clone(), f.clone(), env);
     let mut fenv = env.clone();
     fenv.set(&id, rf);
+
     let f = eval_function_expression(f, &mut fenv);
     env.set(&id, f.clone());
     Object::Let(Box::new(f))
