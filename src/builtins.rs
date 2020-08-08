@@ -13,6 +13,7 @@ lazy_static! {
         map.insert("last", last as BuiltinFunction);
         map.insert("rest", rest as BuiltinFunction);
         map.insert("push", push as BuiltinFunction);
+        map.insert("puts", puts as BuiltinFunction);
         map
     };
 }
@@ -94,6 +95,13 @@ fn push(args: Vec<Object>) -> Object {
         }
         (o, _) => new_not_supported_error("push", o),
     }
+}
+
+fn puts(args: Vec<Object>) -> Object {
+    for a in args {
+        println!("{}", a);
+    }
+    Object::Null
 }
 
 // helpers
@@ -214,6 +222,19 @@ mod tests {
         ];
         for (args, expected) in tests {
             assert_eq!(push(args), expected);
+        }
+    }
+
+    #[test]
+    fn puts() {
+        let puts = test_get("puts");
+        // args, expected
+        let tests = vec![
+            (vec![], new_null()),
+            (vec![new_integer(1), new_integer(2)], new_null()),
+        ];
+        for (args, expected) in tests {
+            assert_eq!(puts(args), expected);
         }
     }
 
