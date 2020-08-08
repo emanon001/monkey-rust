@@ -2,6 +2,7 @@ use crate::ast::{self};
 use crate::lexer::Lexer;
 use crate::token::Token;
 use itertools::Itertools;
+use std::collections::BTreeMap;
 
 pub fn parse(lexer: Lexer) -> std::result::Result<ast::Program, Errors> {
     let mut parser = Parser::new(lexer);
@@ -193,6 +194,7 @@ impl Parser {
             Some(Token::True) | Some(Token::False) => self.parse_boolean_expression(),
             Some(Token::String(_)) => self.parse_string_expression(),
             Some(Token::LBracket) => self.parse_array_expression(),
+            Some(Token::LBrace) => self.parse_hash_expression(),
             Some(Token::Bang) | Some(Token::Minus) => self.parse_prefix_expression(),
             Some(Token::LParen) => self.parse_grouped_expression(),
             Some(Token::If) => self.parse_if_expression(),
@@ -263,6 +265,29 @@ impl Parser {
         self.expect_current_token(Token::LBracket)?;
         let exprs = self.parse_expression_list(Token::RBracket)?;
         Ok(ast::Expression::Array(exprs))
+    }
+
+    fn parse_hash_expression(&mut self) -> Result<ast::Expression> {
+        // {[<expr>: <expr>, ...]}
+        self.expect_current_token(Token::LBrace)?;
+
+        let is_not_end = |tok: Option<&Token>| tok.filter(|&t| t != &Token::RBrace).is_some();
+        // <expr>: <expr>, [<expr>: <expr>, ...]
+        let mut map = BTreeMap::new();
+        while is_not_end(self.peek_token()) {
+            self.next();
+            let key = self.parse_expression(Precedence::Lowest)?;
+            self.expect_peek_token_and_next(Token::Colon)?;
+            self.next();
+            let value = self.parse_expression(Precedence::Lowest)?;
+            map.insert(key, value);
+            if is_not_end(self.peek_token()) {
+                self.expect_peek_token_and_next(Token::Comma)?;
+            }
+        }
+        // }
+        self.expect_peek_token_and_next(Token::RBrace)?;
+        Ok(ast::Expression::Hash(map))
     }
 
     fn parse_prefix_expression(&mut self) -> Result<ast::Expression> {
@@ -615,6 +640,74 @@ mod tests {
                 );
             }
             _ => panic!("expression is not array. got={:?}", expr),
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn parse_hash_string_key_expression() -> Result<()> {
+        let input = r#"{"one": 1, "two": 2, "three": 3}"#;
+        let lexer = Lexer::new(input.into());
+        let program = parse(lexer)?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Hash(v) => {
+                assert_eq!(v.len(), 3);
+                test_integer_expression(&v[&new_string_expr("one")], 1);
+                test_integer_expression(&v[&new_string_expr("two")], 2);
+                test_integer_expression(&v[&new_string_expr("three")], 3);
+            }
+            _ => panic!("expression is not hash. got={:?}", expr),
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn parse_empty_hash_expression() -> Result<()> {
+        let input = r#"{}"#;
+        let lexer = Lexer::new(input.into());
+        let program = parse(lexer)?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Hash(v) => {
+                assert!(v.is_empty());
+            }
+            _ => panic!("expression is not hash. got={:?}", expr),
+        });
+        Ok(())
+    }
+    #[test]
+    fn parse_hash_expr_value_expression() -> Result<()> {
+        let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
+        let lexer = Lexer::new(input.into());
+        let program = parse(lexer)?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Hash(v) => {
+                assert_eq!(v.len(), 3);
+                test_infix_expression(
+                    &v[&new_string_expr("one")],
+                    new_int_expr(0),
+                    ast::InfixOperator::Add,
+                    new_int_expr(1),
+                );
+                test_infix_expression(
+                    &v[&new_string_expr("two")],
+                    new_int_expr(10),
+                    ast::InfixOperator::Sub,
+                    new_int_expr(8),
+                );
+                test_infix_expression(
+                    &v[&new_string_expr("three")],
+                    new_int_expr(15),
+                    ast::InfixOperator::Div,
+                    new_int_expr(5),
+                );
+            }
+            _ => panic!("expression is not hash. got={:?}", expr),
         });
         Ok(())
     }
@@ -1073,5 +1166,13 @@ mod tests {
             }
             _ => panic!("expression not infix. got={:?}", expr),
         }
+    }
+
+    fn new_int_expr(n: i64) -> ast::Expression {
+        ast::Expression::Integer(n)
+    }
+
+    fn new_string_expr(s: &str) -> ast::Expression {
+        ast::Expression::String(s.into())
     }
 }
