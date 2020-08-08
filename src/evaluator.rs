@@ -388,6 +388,7 @@ fn eval_index_expression(
     }
     match (left, index) {
         (Object::Array(array), Object::Integer(idx)) => eval_array_index_expression(array, idx),
+        (Object::Hash(hash), idx) => eval_hash_index_expression(hash, idx),
         (l, _) => new_error_object(&format!("index operator not supported: `{}`", l)),
     }
 }
@@ -398,6 +399,14 @@ fn eval_array_index_expression(array: Vec<Object>, idx: i64) -> Object {
     }
     let idx = idx as usize;
     array[idx].clone()
+}
+
+fn eval_hash_index_expression(hash: HashMap<HashKey, Object>, idx: Object) -> Object {
+    let idx = match HashKey::try_from(idx) {
+        Ok(it) => it,
+        Err((_, o)) => return new_error_object(&format!("unusable as hash key: `{}`", o)),
+    };
+    hash.get(&idx).cloned().unwrap_or(null_object())
 }
 
 fn unwrap_return_value(obj: Object) -> Object {
@@ -588,6 +597,23 @@ mod tests {
         .collect::<HashMap<_, _>>();
         let v = test_eval(input.into());
         assert_eq!(v, Object::Hash(expected));
+    }
+
+    #[test]
+    fn eval_hash_index_expressio() {
+        let tests = vec![
+            (r#"{"foo": 5}["foo"]"#, new_int(5)),
+            (r#"{"foo": 5}["bar"]"#, Object::Null),
+            (r#"let key = "foo"; {"foo": 5}[key]"#, new_int(5)),
+            (r#"{}["foo"]"#, Object::Null),
+            (r#"{5: 5}[5]"#, new_int(5)),
+            (r#"{true: 5}[true]"#, new_int(5)),
+            (r#"{false: 5}[false]"#, new_int(5)),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
+        }
     }
 
     #[test]
