@@ -743,7 +743,25 @@ mod tests {
     }
 
     #[test]
-    fn eval_array_map() {
+    fn eval_let_function_call() {
+        let input = r#"
+        let f = fn(n) {
+            if (n == 1) {
+                1
+            } else {
+                n * f(n - 1)
+            }
+        };
+        let g = f;
+        let f = 1;
+        g(10);
+        "#;
+        let v = test_eval(input.into());
+        assert_eq!(v, Object::Integer(3628800));
+    }
+
+    #[test]
+    fn eval_array_map_function() {
         let input = r#"
         let map = fn(arr, f) {
             let iter = fn(arr, accumulated) {
@@ -772,7 +790,7 @@ mod tests {
     }
 
     #[test]
-    fn eval_array_reduce() {
+    fn eval_array_reduce_function() {
         let input = r#"
         let reduce = fn(arr, initial, f) {
             let iter = fn(arr, result) {
