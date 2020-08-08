@@ -31,7 +31,7 @@ impl Repl {
             match parse(lexer) {
                 Ok(program) => {
                     let evaluated = eval(program, &mut env);
-                    if let object::Object::Let(_) = evaluated {
+                    if let object::Object::Let = evaluated {
                         // no output
                     } else {
                         write!(writer, "{}\n", evaluated)?;

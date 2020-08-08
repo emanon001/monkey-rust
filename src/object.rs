@@ -16,7 +16,7 @@ pub enum Object {
     Null,
     Return(Box<Object>),
     Error(String),
-    Let(Box<Object>),
+    Let,
     Function {
         params: Vec<ast::Identifier>,
         body: ast::BlockStatement,
@@ -60,7 +60,7 @@ impl fmt::Display for Object {
             Object::Null => write!(f, "null"),
             Object::Return(it) => write!(f, "{}", it),
             Object::Error(it) => write!(f, "{}", it),
-            Object::Let(it) => write!(f, "{}", it),
+            Object::Let => write!(f, ""),
             Object::Function { params, body, .. } => {
                 let params = params.iter().join(", ");
                 write!(f, "fn({}) {{\n{}\n}}", params, body)

@@ -56,7 +56,7 @@ fn eval_let_statement(id: ast::Identifier, expr: ast::Expression, env: &mut Envi
                 return obj;
             }
             env.set(&id, obj.clone());
-            Object::Let(Box::new(obj))
+            Object::Let
         }
     }
 }
@@ -74,7 +74,7 @@ fn eval_let_function_statement(
 
     let f = eval_function_expression(f, &mut fenv);
     env.set(&id, f.clone());
-    Object::Let(Box::new(f))
+    Object::Let
 }
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
