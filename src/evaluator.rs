@@ -1,5 +1,5 @@
+mod builtins;
 use crate::ast::{self};
-use crate::builtins::{self};
 use crate::object::{Environment, HashKey, Object};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;

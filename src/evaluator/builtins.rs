@@ -123,7 +123,7 @@ fn new_not_supported_error(fname: &str, o: &Object) -> Object {
 #[cfg(test)]
 mod tests {
     use crate::ast::Identifier;
-    use crate::builtins::{get, BuiltinFunction};
+    use crate::evaluator::builtins::{get, BuiltinFunction};
     use crate::object::Object;
 
     #[test]
