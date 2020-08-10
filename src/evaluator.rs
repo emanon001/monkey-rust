@@ -36,6 +36,7 @@ fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
             identifier,
             expression,
         } => eval_let_statement(identifier, expression, env),
+        ast::Statement::Block(it) => eval_block_statement(it, env),
     }
 }
 
@@ -75,6 +76,25 @@ fn eval_let_function_statement(
     let f = eval_function_expression(f, &mut fenv);
     env.set(&id, f.clone());
     Object::Let
+}
+
+fn eval_block_statement(block: ast::BlockStatement, env: &mut Environment) -> Object {
+    let mut env = Environment::new_with_outer(env.clone());
+    let stmts = block.statements;
+    let mut res = null_object();
+    for s in stmts {
+        res = eval_statement(s, &mut env);
+        match &res {
+            Object::Return(_) => {
+                return res;
+            }
+            Object::Error(_) => {
+                return res;
+            }
+            _ => {}
+        }
+    }
+    res
 }
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
@@ -266,24 +286,6 @@ fn eval_if_expression(
     } else {
         null_object()
     }
-}
-
-fn eval_block_statement(block: ast::BlockStatement, env: &mut Environment) -> Object {
-    let stmts = block.statements;
-    let mut res = null_object();
-    for s in stmts {
-        res = eval_statement(s, env);
-        match &res {
-            Object::Return(_) => {
-                return res;
-            }
-            Object::Error(_) => {
-                return res;
-            }
-            _ => {}
-        }
-    }
-    res
 }
 
 fn eval_identifier_expression(id: ast::Identifier, env: &Environment) -> Object {
@@ -718,7 +720,7 @@ mod tests {
     }
 
     #[test]
-    fn eval_let_statements() {
+    fn eval_let_statement() {
         let tests: Vec<(&str, Object)> = vec![
             ("let a = 5; a;", Object::Integer(5)),
             ("let a = 5 * 5; a;", Object::Integer(25)),
@@ -726,6 +728,21 @@ mod tests {
             (
                 "let a = 5; let b = a; let c = a + b + 5; c;",
                 Object::Integer(15),
+            ),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            assert_eq!(v, expected);
+        }
+    }
+
+    #[test]
+    fn create_env_in_if_block_statement() {
+        let tests: Vec<(&str, Object)> = vec![
+            (r#"let a = 1; if (true) { let a = 2; } a;"#, new_int(1)),
+            (
+                r#"let a = 1; if (false) { } else { let a = 2; } a;"#,
+                new_int(1),
             ),
         ];
         for (input, expected) in tests {

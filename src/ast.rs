@@ -65,6 +65,7 @@ pub enum Statement {
     },
     Return(Expression),
     Expression(Expression),
+    Block(BlockStatement),
 }
 
 impl fmt::Display for Statement {
@@ -76,7 +77,14 @@ impl fmt::Display for Statement {
             } => write!(f, "let {} = {};", identifier, expression),
             Statement::Return(expr) => write!(f, "return {};", expr),
             Statement::Expression(expr) => write!(f, "{}", expr),
+            Statement::Block(it) => write!(f, "{}", it),
         }
+    }
+}
+
+impl std::convert::From<BlockStatement> for Statement {
+    fn from(block: BlockStatement) -> Self {
+        Self::Block(block)
     }
 }
 
