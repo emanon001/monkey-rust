@@ -29,6 +29,7 @@ pub enum Object {
         env: Environment,
     },
     Builtin(fn(Vec<Object>) -> Object),
+    Quote(ast::Expression),
 }
 
 impl Object {
@@ -70,6 +71,7 @@ impl fmt::Display for Object {
                 write!(f, "fn({}) {{\n{}\n}}", params, body)
             }
             Object::Builtin(_) => write!(f, "builtin"),
+            Object::Quote(it) => write!(f, "Quote({})", it),
         }
     }
 }
