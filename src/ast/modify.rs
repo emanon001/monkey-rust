@@ -1,0 +1,91 @@
+use crate::ast::{Expression, Node, Program, Statement};
+
+pub type Error = String;
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn modify<F>(node: Node, modifier: F) -> Result<Node>
+where
+    F: Fn(Expression) -> Expression,
+{
+    match node {
+        Node::Program(it) => Ok(modify_program(it, &modifier)?.into()),
+        Node::Statement(it) => Ok(modify_statement(it, &modifier)?.into()),
+        Node::Expression(it) => Ok(modify_expression(it, &modifier)?.into()),
+    }
+}
+
+fn modify_program<F>(mut prog: Program, modifier: &F) -> Result<Program>
+where
+    F: Fn(Expression) -> Expression,
+{
+    for i in 0..prog.statements.len() {
+        let stat = modify_statement(prog.statements[i].clone(), modifier)?;
+        prog.statements[i] = stat;
+    }
+    Ok(prog)
+}
+
+fn modify_statement<F>(stat: Statement, modifier: &F) -> Result<Statement>
+where
+    F: Fn(Expression) -> Expression,
+{
+    match stat {
+        Statement::Expression(expr) => {
+            Ok(Statement::Expression(modify_expression(expr, modifier)?))
+        }
+        _ => Err("err".into()),
+    }
+}
+
+fn modify_expression<F>(expr: Expression, modifier: &F) -> Result<Expression>
+where
+    F: Fn(Expression) -> Expression,
+{
+    Ok(modifier(expr))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::modify::modify;
+    use crate::ast::{Expression, Node};
+
+    #[test]
+    fn modify_integer_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let Helpers {
+            one,
+            two,
+            turn_one_into_two,
+        } = helpers();
+        let node = Node::from(one.clone());
+        let expected = two.clone();
+        let res = modify(node, turn_one_into_two)?;
+        assert_eq!(res, expected.into());
+        Ok(())
+    }
+
+    // helpers
+
+    struct Helpers {
+        one: Expression,
+        two: Expression,
+        turn_one_into_two: Box<dyn Fn(Expression) -> Expression>,
+    }
+
+    fn helpers() -> Helpers {
+        let one = Expression::Integer(1);
+        let two = Expression::Integer(2);
+        let turn_one_into_two = Box::new(turn_one_into_two);
+        Helpers {
+            one,
+            two,
+            turn_one_into_two,
+        }
+    }
+
+    fn turn_one_into_two(expr: Expression) -> Expression {
+        match expr {
+            Expression::Integer(it) if it == 1 => Expression::Integer(2),
+            other => other,
+        }
+    }
+}
