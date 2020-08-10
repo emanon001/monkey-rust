@@ -47,7 +47,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::ast::modify::modify;
-    use crate::ast::{Expression, Node};
+    use crate::ast::{Expression, Node, Program, Statement};
 
     #[test]
     fn modify_integer_expression() -> Result<(), Box<dyn std::error::Error>> {
@@ -57,9 +57,29 @@ mod tests {
             turn_one_into_two,
         } = helpers();
         let node = Node::from(one.clone());
-        let expected = two.clone();
+        let expected = two.clone().into();
         let res = modify(node, turn_one_into_two)?;
-        assert_eq!(res, expected.into());
+        assert_eq!(res, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn modify_program_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let Helpers {
+            one,
+            two,
+            turn_one_into_two,
+        } = helpers();
+        let node = Program {
+            statements: vec![Statement::Expression(one.clone())],
+        }
+        .into();
+        let expected = Program {
+            statements: vec![Statement::Expression(two.clone())],
+        }
+        .into();
+        let res = modify(node, turn_one_into_two)?;
+        assert_eq!(res, expected);
         Ok(())
     }
 
