@@ -324,6 +324,12 @@ fn eval_call_expression(
     args: Vec<ast::Expression>,
     env: &mut Environment,
 ) -> Object {
+    if let ast::CallExpressionFunction::Identifier(id) = &f {
+        if id.to_string() == "quote" {
+            // TODO: check args len
+            return quote(args[0].clone());
+        }
+    }
     let f = eval_expression(f.into(), env);
     if f.is_error() {
         return f;
@@ -435,6 +441,10 @@ fn false_object() -> Object {
 
 fn null_object() -> Object {
     Object::Null
+}
+
+fn quote(expr: ast::Expression) -> Object {
+    Object::Quote(expr)
 }
 
 fn new_error_object(s: &str) -> Object {
@@ -838,6 +848,22 @@ mod tests {
         "#;
         let v = test_eval(input.into());
         assert_eq!(v, Object::Integer(3628800));
+    }
+
+    #[test]
+    fn eval_quote() {
+        let tests = vec![
+            (r#"quote(5)"#, r#"5"#),
+            (r#"quote(foobar)"#, r#"foobar"#),
+            (r#"quote(foobar + barfoo)"#, r#"(foobar + barfoo)"#),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            match v {
+                Object::Quote(it) => assert_eq!(it.to_string(), expected),
+                _ => panic!("object is not quote. got={:?}", v),
+            }
+        }
     }
 
     #[test]
