@@ -2,6 +2,43 @@ use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::fmt::{self};
 
+// Node
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Node {
+    Program(Program),
+    Statement(Statement),
+    Expression(Expression),
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Program(it) => write!(f, "{}", it),
+            Self::Statement(it) => write!(f, "{}", it),
+            Self::Expression(it) => write!(f, "{}", it),
+        }
+    }
+}
+
+impl std::convert::From<Program> for Node {
+    fn from(prog: Program) -> Self {
+        Self::Program(prog)
+    }
+}
+
+impl std::convert::From<Statement> for Node {
+    fn from(stat: Statement) -> Self {
+        Self::Statement(stat)
+    }
+}
+
+impl std::convert::From<Expression> for Node {
+    fn from(expr: Expression) -> Self {
+        Self::Expression(expr)
+    }
+}
+
 // Program
 
 #[derive(Debug, PartialEq, Eq)]
