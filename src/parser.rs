@@ -199,6 +199,8 @@ impl Parser {
             Some(Token::LParen) => self.parse_grouped_expression(),
             Some(Token::If) => self.parse_if_expression(),
             Some(Token::Function) => self.parse_function_expression(),
+            Some(Token::Quote) => self.parse_quote_expression(),
+            Some(Token::Unquote) => self.parse_unquote_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
         }
     }
@@ -424,6 +426,30 @@ impl Parser {
         Ok(identifiers)
     }
 
+    fn parse_quote_expression(&mut self) -> Result<ast::Expression> {
+        // quote(<expr>)
+
+        self.expect_current_token(Token::Quote)?;
+        self.expect_peek_token_and_next(Token::LParen)?;
+        self.next();
+        let expr = self.parse_expression(Precedence::Lowest)?;
+        self.expect_peek_token_and_next(Token::RParen)?;
+
+        Ok(ast::Expression::Quote(expr.into()))
+    }
+
+    fn parse_unquote_expression(&mut self) -> Result<ast::Expression> {
+        // unquote(<expr>)
+
+        self.expect_current_token(Token::Unquote)?;
+        self.expect_peek_token_and_next(Token::LParen)?;
+        self.next();
+        let expr = self.parse_expression(Precedence::Lowest)?;
+        self.expect_peek_token_and_next(Token::RParen)?;
+
+        Ok(ast::Expression::Unquote(expr.into()))
+    }
+
     fn parse_expression_list(&mut self, end: Token) -> Result<Vec<ast::Expression>> {
         // <start>[<expr>, ...]<end>
         if self.peek_token() == Some(&end) {
@@ -479,7 +505,7 @@ impl Parser {
 
     fn parse_identifier(token: Option<&Token>) -> Result<ast::Identifier> {
         match token {
-            Some(Token::Identifier(id)) => Ok(ast::Identifier(id.clone())),
+            Some(Token::Identifier(id)) => Ok(id.into()),
             t => Err(Self::new_parse_error("identifier", t).into()),
         }
     }

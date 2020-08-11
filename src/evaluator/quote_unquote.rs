@@ -15,16 +15,13 @@ fn eval_unquote_calls(quoted: ast::Node, env: &mut Environment) -> Result<ast::N
         if !is_unquote_call(&node) {
             return node;
         }
-        match &node {
+        match node {
             ast::Node::Expression(expr) => match expr {
-                ast::Expression::Call { args, .. } => {
-                    if args.len() != 1 {
-                        return node;
-                    }
-                    let expr = args[0].clone();
+                ast::Expression::Unquote(expr) => {
+                    let expr = *expr;
                     eval(expr.into(), env).into()
                 }
-                _ => node,
+                other => other.into(),
             },
             _ => node,
         }
@@ -34,10 +31,7 @@ fn eval_unquote_calls(quoted: ast::Node, env: &mut Environment) -> Result<ast::N
 fn is_unquote_call(node: &ast::Node) -> bool {
     match node {
         ast::Node::Expression(expr) => match expr {
-            ast::Expression::Call { function, .. } => match function {
-                ast::CallExpressionFunction::Identifier(id) => id.0 == "unquote",
-                _ => false,
-            },
+            ast::Expression::Unquote(_) => true,
             _ => false,
         },
         _ => false,

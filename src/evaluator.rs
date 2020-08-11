@@ -127,6 +127,10 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         ast::Expression::Function(expr) => eval_function_expression(expr, env),
         ast::Expression::Call { function, args } => eval_call_expression(function, args, env),
         ast::Expression::Index { left, index } => eval_index_expression(*left, *index, env),
+        ast::Expression::Quote(expr) => eval_quote_expression(*expr, env),
+        ast::Expression::Unquote(_) => {
+            new_error_object("`unquote` can only be used in `quote(...)`")
+        }
     }
 }
 
@@ -425,6 +429,13 @@ fn eval_hash_index_expression(hash: HashMap<HashKey, Object>, idx: Object) -> Ob
         Err((_, o)) => return new_error_object(&format!("unusable as hash key: `{}`", o)),
     };
     hash.get(&idx).cloned().unwrap_or(null_object())
+}
+
+fn eval_quote_expression(expr: ast::Expression, env: &mut Environment) -> Object {
+    match quote(expr.into(), env) {
+        Ok(quoted) => quoted,
+        Err(e) => new_error_object(&e),
+    }
 }
 
 fn unwrap_return_value(obj: Object) -> Object {

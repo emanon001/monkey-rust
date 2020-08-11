@@ -138,6 +138,12 @@ impl std::convert::From<String> for Identifier {
     }
 }
 
+impl std::convert::From<&String> for Identifier {
+    fn from(s: &String) -> Self {
+        Self(s.into())
+    }
+}
+
 // BlockStatement
 
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
@@ -187,6 +193,8 @@ pub enum Expression {
         left: Box<Expression>,
         index: Box<Expression>,
     },
+    Quote(Box<Expression>),
+    Unquote(Box<Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -231,6 +239,8 @@ impl fmt::Display for Expression {
                 write!(f, "{}({})", function, args)
             }
             Expression::Index { left, index } => write!(f, "({}[{}])", left, index),
+            Expression::Quote(expr) => write!(f, "quote({})", expr),
+            Expression::Unquote(expr) => write!(f, "unquote({})", expr),
         }
     }
 }
