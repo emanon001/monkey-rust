@@ -909,6 +909,8 @@ mod tests {
                 "#,
                 "8",
             ),
+            ("quote(unquote(true))", "true"),
+            ("quote(unquote(true == false))", "false"),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());

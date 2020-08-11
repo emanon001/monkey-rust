@@ -48,7 +48,8 @@ fn is_unquote_call(node: &ast::Node) -> bool {
 impl std::convert::From<Object> for ast::Node {
     fn from(obj: Object) -> ast::Node {
         match obj {
-            Object::Integer(n) => ast::Expression::Integer(n).into(),
+            Object::Integer(it) => ast::Expression::Integer(it).into(),
+            Object::Boolean(it) => ast::Expression::Boolean(it).into(),
             _ => ast::Expression::String("dummy".into()).into(),
         }
     }
