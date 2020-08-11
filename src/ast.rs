@@ -123,6 +123,18 @@ impl fmt::Display for Identifier {
     }
 }
 
+impl std::convert::From<&str> for Identifier {
+    fn from(s: &str) -> Self {
+        Self(s.into())
+    }
+}
+
+impl std::convert::From<String> for Identifier {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
 // BlockStatement
 
 #[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]

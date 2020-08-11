@@ -1,4 +1,4 @@
-use crate::ast::{Expression, Node, Program, Statement};
+use crate::ast::*;
 
 pub type Error = String;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -21,17 +21,55 @@ fn modify_program<F: Fn(Node) -> Node>(prog: Program, modifier: &F) -> Result<Pr
     Ok(prog)
 }
 
+// statements
+
 fn modify_statement<F: Fn(Node) -> Node>(stat: Statement, modifier: &F) -> Result<Statement> {
     match stat {
+        Statement::Let {
+            identifier,
+            expression,
+        } => {
+            let expression = modify_expression(expression, modifier)?;
+            Ok(Statement::Let {
+                identifier,
+                expression,
+            })
+        }
+        Statement::Return(expr) => Ok(Statement::Return(modify_expression(expr, modifier)?)),
         Statement::Expression(expr) => {
             Ok(Statement::Expression(modify_expression(expr, modifier)?))
         }
-        other => Ok(modifier(other.into()).statement()?.into()),
+        Statement::Block(block) => {
+            let block = modify_block_statement(block, modifier)?;
+            Ok(block.into())
+        }
     }
 }
 
+fn modify_block_statement<F: Fn(Node) -> Node>(
+    block: BlockStatement,
+    modifier: &F,
+) -> Result<BlockStatement> {
+    let mut statements = Vec::new();
+    for stat in block.statements {
+        let stat = modify_statement(stat, modifier)?;
+        statements.push(stat);
+    }
+    let block = BlockStatement { statements };
+    Ok(block.into())
+}
+
+// expressions
+
 fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Result<Expression> {
     match expr {
+        Expression::Array(it) => {
+            let mut elements = Vec::new();
+            for e in it {
+                elements.push(modify_expression(e, modifier)?);
+            }
+            Ok(Expression::Array(elements))
+        }
         Expression::Prefix { operator, right } => {
             let right = modify_expression(*right, modifier)?;
             Ok(Expression::Prefix {
@@ -52,6 +90,32 @@ fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Res
                 right: right.into(),
             })
         }
+        Expression::If {
+            condition,
+            consequence,
+            alternative,
+        } => {
+            let condition = modify_expression(*condition, modifier)?;
+            let consequence = modify_block_statement(consequence, modifier)?;
+            let alternative = if let Some(alt) = alternative {
+                Some(modify_block_statement(alt, modifier)?)
+            } else {
+                alternative
+            };
+            Ok(Expression::If {
+                condition: condition.into(),
+                consequence,
+                alternative,
+            })
+        }
+        Expression::Function(f) => {
+            let body = modify_block_statement(f.body, modifier)?;
+            let f = FunctionExpression {
+                params: f.params,
+                body,
+            };
+            Ok(Expression::Function(f))
+        }
         Expression::Index { left, index } => {
             let left = modify_expression(*left, modifier)?;
             let index = modify_expression(*index, modifier)?;
@@ -67,14 +131,27 @@ fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Res
 #[cfg(test)]
 mod tests {
     use crate::ast::modify::modify;
-    use crate::ast::{Expression, InfixOperator, Node, PrefixOperator, Program, Statement};
-
+    use crate::ast::*;
     #[test]
     fn modify_integer_expression() -> Result<(), Box<dyn std::error::Error>> {
         let node = Node::from(one());
         let expected = two().into();
         let res = modify(node, turn_one_into_two)?;
         assert_eq!(res, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn modify_array_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Expression::Array(vec![one(), one()]),
+            Expression::Array(vec![two(), two()]),
+        )];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
         Ok(())
     }
 
@@ -135,6 +212,60 @@ mod tests {
     }
 
     #[test]
+    fn modify_if_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Expression::If {
+                condition: one().into(),
+                consequence: BlockStatement {
+                    statements: vec![Statement::Expression(one())],
+                },
+                alternative: Some(BlockStatement {
+                    statements: vec![Statement::Expression(one())],
+                }),
+            },
+            Expression::If {
+                condition: two().into(),
+                consequence: BlockStatement {
+                    statements: vec![Statement::Expression(two())],
+                },
+                alternative: Some(BlockStatement {
+                    statements: vec![Statement::Expression(two())],
+                }),
+            },
+        )];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn modify_function_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Expression::Function(FunctionExpression {
+                params: Vec::new(),
+                body: BlockStatement {
+                    statements: vec![Statement::Expression(one())],
+                },
+            }),
+            Expression::Function(FunctionExpression {
+                params: Vec::new(),
+                body: BlockStatement {
+                    statements: vec![Statement::Expression(two())],
+                },
+            }),
+        )];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
+        Ok(())
+    }
+
+    #[test]
     fn modify_index_expression() -> Result<(), Box<dyn std::error::Error>> {
         let tests = vec![(
             Expression::Index {
@@ -166,6 +297,37 @@ mod tests {
         .into();
         let res = modify(node, turn_one_into_two)?;
         assert_eq!(res, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn modify_let_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Statement::Let {
+                identifier: "foo".into(),
+                expression: one(),
+            },
+            Statement::Let {
+                identifier: "foo".into(),
+                expression: two(),
+            },
+        )];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn modify_return_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(Statement::Return(one()), Statement::Return(two()))];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
         Ok(())
     }
 
