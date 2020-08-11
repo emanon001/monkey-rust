@@ -1,5 +1,6 @@
 mod modify;
 use itertools::Itertools;
+pub use modify::modify;
 use std::collections::BTreeMap;
 use std::fmt::{self};
 

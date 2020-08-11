@@ -331,7 +331,10 @@ fn eval_call_expression(
     if let ast::CallExpressionFunction::Identifier(id) = &f {
         if id.to_string() == "quote" {
             // TODO: check args len
-            return quote(args[0].clone().into());
+            return match quote(args[0].clone().into()) {
+                Ok(quoted) => quoted,
+                Err(e) => new_error_object(&e),
+            };
         }
     }
     let f = eval_expression(f.into(), env);
