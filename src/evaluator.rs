@@ -911,6 +911,14 @@ mod tests {
             ),
             ("quote(unquote(true))", "true"),
             ("quote(unquote(true == false))", "false"),
+            ("quote(unquote(quote(4 + 4)))", "(4 + 4)"),
+            (
+                r#"
+                let quotedInfixExpression = quote(4 + 4);
+                quote(unquote(4 + 4) + unquote(quotedInfixExpression))
+                "#,
+                "(8 + (4 + 4))",
+            ),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());

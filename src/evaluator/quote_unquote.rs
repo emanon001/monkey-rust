@@ -50,6 +50,7 @@ impl std::convert::From<Object> for ast::Node {
         match obj {
             Object::Integer(it) => ast::Expression::Integer(it).into(),
             Object::Boolean(it) => ast::Expression::Boolean(it).into(),
+            Object::Quote(node) => node,
             _ => ast::Expression::String("dummy".into()).into(),
         }
     }
