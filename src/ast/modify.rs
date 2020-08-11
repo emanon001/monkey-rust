@@ -52,6 +52,14 @@ fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Res
                 right: right.into(),
             })
         }
+        Expression::Index { left, index } => {
+            let left = modify_expression(*left, modifier)?;
+            let index = modify_expression(*index, modifier)?;
+            Ok(Expression::Index {
+                left: left.into(),
+                index: index.into(),
+            })
+        }
         other => Ok(modifier(other.into()).expression()?),
     }
 }
@@ -118,6 +126,26 @@ mod tests {
                 },
             ),
         ];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn modify_index_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Expression::Index {
+                left: one().into(),
+                index: one().into(),
+            },
+            Expression::Index {
+                left: two().into(),
+                index: two().into(),
+            },
+        )];
         for (expr, expected) in tests {
             let node = Node::from(expr);
             let res = modify(node, turn_one_into_two)?;
