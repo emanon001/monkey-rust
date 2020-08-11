@@ -63,12 +63,21 @@ fn modify_block_statement<F: Fn(Node) -> Node>(
 
 fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Result<Expression> {
     match expr {
-        Expression::Array(it) => {
+        Expression::Array(ary) => {
             let mut elements = Vec::new();
-            for e in it {
+            for e in ary {
                 elements.push(modify_expression(e, modifier)?);
             }
             Ok(Expression::Array(elements))
+        }
+        Expression::Hash(map) => {
+            let mut new_map = BTreeMap::new();
+            for (k, v) in map {
+                let k = modify_expression(k, modifier)?;
+                let v = modify_expression(v, modifier)?;
+                new_map.insert(k, v);
+            }
+            Ok(Expression::Hash(new_map))
         }
         Expression::Prefix { operator, right } => {
             let right = modify_expression(*right, modifier)?;
@@ -132,6 +141,8 @@ fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Res
 mod tests {
     use crate::ast::modify::modify;
     use crate::ast::*;
+    use std::collections::BTreeMap;
+
     #[test]
     fn modify_integer_expression() -> Result<(), Box<dyn std::error::Error>> {
         let node = Node::from(one());
@@ -146,6 +157,20 @@ mod tests {
         let tests = vec![(
             Expression::Array(vec![one(), one()]),
             Expression::Array(vec![two(), two()]),
+        )];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn modify_hash_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Expression::Hash(vec![(one(), one())].into_iter().collect::<BTreeMap<_, _>>()),
+            Expression::Hash(vec![(two(), two())].into_iter().collect::<BTreeMap<_, _>>()),
         )];
         for (expr, expected) in tests {
             let node = Node::from(expr);
