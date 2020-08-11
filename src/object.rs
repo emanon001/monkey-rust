@@ -29,7 +29,7 @@ pub enum Object {
         env: Environment,
     },
     Builtin(fn(Vec<Object>) -> Object),
-    Quote(ast::Expression),
+    Quote(ast::Node),
 }
 
 impl Object {

@@ -5,7 +5,7 @@ use std::fmt::{self};
 
 // Node
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Node {
     Program(Program),
     Statement(Statement),
@@ -65,7 +65,7 @@ impl std::convert::From<Expression> for Node {
 
 // Program
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Program {
     pub statements: Vec<Statement>,
 }
