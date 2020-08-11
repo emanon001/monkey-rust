@@ -3,10 +3,7 @@ use crate::ast::{Expression, Node, Program, Statement};
 pub type Error = String;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub fn modify<F>(node: Node, modifier: F) -> Result<Node>
-where
-    F: Fn(Node) -> Node,
-{
+pub fn modify<F: Fn(Node) -> Node>(node: Node, modifier: F) -> Result<Node> {
     match node {
         Node::Program(it) => Ok(modify_program(it, &modifier)?.into()),
         Node::Statement(it) => Ok(modify_statement(it, &modifier)?.into()),
@@ -14,33 +11,26 @@ where
     }
 }
 
-fn modify_program<F>(mut prog: Program, modifier: &F) -> Result<Program>
-where
-    F: Fn(Node) -> Node,
-{
-    for i in 0..prog.statements.len() {
-        let stat = modify_statement(prog.statements[i].clone(), modifier)?;
-        prog.statements[i] = stat;
+fn modify_program<F: Fn(Node) -> Node>(prog: Program, modifier: &F) -> Result<Program> {
+    let mut statements = Vec::new();
+    for stat in prog.statements {
+        let stat = modify_statement(stat, modifier)?;
+        statements.push(stat);
     }
+    let prog = Program { statements };
     Ok(prog)
 }
 
-fn modify_statement<F>(stat: Statement, modifier: &F) -> Result<Statement>
-where
-    F: Fn(Node) -> Node,
-{
+fn modify_statement<F: Fn(Node) -> Node>(stat: Statement, modifier: &F) -> Result<Statement> {
     match stat {
         Statement::Expression(expr) => {
             Ok(Statement::Expression(modify_expression(expr, modifier)?))
         }
-        _ => Err("err".into()),
+        other => Ok(modifier(other.into()).statement()?.into()),
     }
 }
 
-fn modify_expression<F>(expr: Expression, modifier: &F) -> Result<Expression>
-where
-    F: Fn(Node) -> Node,
-{
+fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Result<Expression> {
     Ok(modifier(expr.into()).expression()?)
 }
 
