@@ -14,6 +14,7 @@ pub enum Node {
 }
 
 impl Node {
+    #[allow(dead_code)]
     pub fn program(self) -> Result<Program, String> {
         match self {
             Node::Program(it) => Ok(it),
@@ -21,6 +22,7 @@ impl Node {
         }
     }
 
+    #[allow(dead_code)]
     pub fn statement(self) -> Result<Statement, String> {
         match self {
             Node::Statement(it) => Ok(it),
