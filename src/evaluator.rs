@@ -889,12 +889,26 @@ mod tests {
     }
 
     #[test]
-    fn quote_unquote() {
+    fn eval_quote_unquote() {
         let tests = vec![
             ("quote(unquote(4))", "4"),
             ("quote(unquote(4 + 4))", "8"),
             ("quote(8 + unquote(4 + 4))", "(8 + 8)"),
             ("quote(unquote(4 + 4) + 8)", "(8 + 8)"),
+            (
+                r#"
+                let foobar = 8;
+                quote(foobar)
+                "#,
+                "foobar",
+            ),
+            (
+                r#"
+                let foobar = 8;
+                quote(unquote(foobar))
+                "#,
+                "8",
+            ),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
