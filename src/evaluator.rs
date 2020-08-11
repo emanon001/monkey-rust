@@ -1,5 +1,7 @@
 mod builtins;
+mod quote_unquote;
 use crate::ast::{self};
+use crate::evaluator::quote_unquote::quote;
 use crate::object::{Environment, HashKey, Object};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
@@ -443,10 +445,6 @@ fn false_object() -> Object {
 
 fn null_object() -> Object {
     Object::Null
-}
-
-fn quote(expr: ast::Expression) -> Object {
-    Object::Quote(expr)
 }
 
 fn new_error_object(s: &str) -> Object {
