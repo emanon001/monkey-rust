@@ -12,6 +12,29 @@ pub enum Node {
     Expression(Expression),
 }
 
+impl Node {
+    pub fn programe(self) -> Result<Program, String> {
+        match self {
+            Node::Program(it) => Ok(it),
+            _ => Err("node is not Program".into()),
+        }
+    }
+
+    pub fn statement(self) -> Result<Statement, String> {
+        match self {
+            Node::Statement(it) => Ok(it),
+            _ => Err("node is not Statement".into()),
+        }
+    }
+
+    pub fn expression(self) -> Result<Expression, String> {
+        match self {
+            Node::Expression(it) => Ok(it),
+            _ => Err("node is not Expression".into()),
+        }
+    }
+}
+
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
