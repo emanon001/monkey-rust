@@ -97,6 +97,8 @@ impl Lexer {
             "if" => Token::If,
             "else" => Token::Else,
             "return" => Token::Return,
+            "quote" => Token::Quote,
+            "unquote" => Token::Unquote,
             _ => Token::Identifier(ident),
         }
     }
@@ -354,6 +356,25 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::Colon));
         assert_eq!(iter.next(), Some(Token::String("bar".into())));
         assert_eq!(iter.next(), Some(Token::RBrace));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn quote_unquote() {
+        let input = r#"
+        quote(unquote(1 + 1))
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::Quote));
+        assert_eq!(iter.next(), Some(Token::LParen));
+        assert_eq!(iter.next(), Some(Token::Unquote));
+        assert_eq!(iter.next(), Some(Token::LParen));
+        assert_eq!(iter.next(), Some(Token::Int("1".into())));
+        assert_eq!(iter.next(), Some(Token::Plus));
+        assert_eq!(iter.next(), Some(Token::Int("1".into())));
+        assert_eq!(iter.next(), Some(Token::RParen));
+        assert_eq!(iter.next(), Some(Token::RParen));
         assert_eq!(iter.next(), None);
     }
 }
