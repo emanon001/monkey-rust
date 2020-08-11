@@ -32,6 +32,13 @@ fn modify_statement<F: Fn(Node) -> Node>(stat: Statement, modifier: &F) -> Resul
 
 fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Result<Expression> {
     match expr {
+        Expression::Prefix { operator, right } => {
+            let right = modify_expression(*right, modifier)?;
+            Ok(Expression::Prefix {
+                operator,
+                right: right.into(),
+            })
+        }
         Expression::Infix {
             left,
             operator,
@@ -52,7 +59,7 @@ fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Res
 #[cfg(test)]
 mod tests {
     use crate::ast::modify::modify;
-    use crate::ast::{Expression, InfixOperator, Node, Program, Statement};
+    use crate::ast::{Expression, InfixOperator, Node, PrefixOperator, Program, Statement};
 
     #[test]
     fn modify_integer_expression() -> Result<(), Box<dyn std::error::Error>> {
@@ -60,6 +67,26 @@ mod tests {
         let expected = two().into();
         let res = modify(node, turn_one_into_two)?;
         assert_eq!(res, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn modify_prefix_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![(
+            Expression::Prefix {
+                operator: PrefixOperator::Minus,
+                right: one().into(),
+            },
+            Expression::Prefix {
+                operator: PrefixOperator::Minus,
+                right: two().into(),
+            },
+        )];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
         Ok(())
     }
 
