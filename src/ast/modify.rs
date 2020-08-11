@@ -31,41 +31,82 @@ fn modify_statement<F: Fn(Node) -> Node>(stat: Statement, modifier: &F) -> Resul
 }
 
 fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Result<Expression> {
-    Ok(modifier(expr.into()).expression()?)
+    match expr {
+        Expression::Infix {
+            left,
+            operator,
+            right,
+        } => {
+            let left = modify_expression(*left, modifier)?;
+            let right = modify_expression(*right, modifier)?;
+            Ok(Expression::Infix {
+                left: left.into(),
+                operator,
+                right: right.into(),
+            })
+        }
+        other => Ok(modifier(other.into()).expression()?),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::ast::modify::modify;
-    use crate::ast::{Expression, Node, Program, Statement};
+    use crate::ast::{Expression, InfixOperator, Node, Program, Statement};
 
     #[test]
     fn modify_integer_expression() -> Result<(), Box<dyn std::error::Error>> {
-        let Helpers {
-            one,
-            two,
-            turn_one_into_two,
-        } = helpers();
-        let node = Node::from(one.clone());
-        let expected = two.clone().into();
+        let node = Node::from(one());
+        let expected = two().into();
         let res = modify(node, turn_one_into_two)?;
         assert_eq!(res, expected);
         Ok(())
     }
 
     #[test]
+    fn modify_infix_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let tests = vec![
+            (
+                Expression::Infix {
+                    left: one().into(),
+                    operator: InfixOperator::Add,
+                    right: two().into(),
+                },
+                Expression::Infix {
+                    left: two().into(),
+                    operator: InfixOperator::Add,
+                    right: two().into(),
+                },
+            ),
+            (
+                Expression::Infix {
+                    left: two().into(),
+                    operator: InfixOperator::Add,
+                    right: one().into(),
+                },
+                Expression::Infix {
+                    left: two().into(),
+                    operator: InfixOperator::Add,
+                    right: two().into(),
+                },
+            ),
+        ];
+        for (expr, expected) in tests {
+            let node = Node::from(expr);
+            let res = modify(node, turn_one_into_two)?;
+            assert_eq!(res, expected.into());
+        }
+        Ok(())
+    }
+
+    #[test]
     fn modify_program_statement() -> Result<(), Box<dyn std::error::Error>> {
-        let Helpers {
-            one,
-            two,
-            turn_one_into_two,
-        } = helpers();
         let node = Program {
-            statements: vec![Statement::Expression(one.clone())],
+            statements: vec![Statement::Expression(one())],
         }
         .into();
         let expected = Program {
-            statements: vec![Statement::Expression(two.clone())],
+            statements: vec![Statement::Expression(two())],
         }
         .into();
         let res = modify(node, turn_one_into_two)?;
@@ -75,21 +116,12 @@ mod tests {
 
     // helpers
 
-    struct Helpers {
-        one: Expression,
-        two: Expression,
-        turn_one_into_two: Box<dyn Fn(Node) -> Node>,
+    fn one() -> Expression {
+        Expression::Integer(1)
     }
 
-    fn helpers() -> Helpers {
-        let one = Expression::Integer(1);
-        let two = Expression::Integer(2);
-        let turn_one_into_two = Box::new(turn_one_into_two);
-        Helpers {
-            one,
-            two,
-            turn_one_into_two,
-        }
+    fn two() -> Expression {
+        Expression::Integer(2)
     }
 
     fn turn_one_into_two(node: Node) -> Node {
