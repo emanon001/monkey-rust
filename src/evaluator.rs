@@ -8,8 +8,12 @@ use std::convert::TryFrom;
 
 // eval
 
-pub fn eval(program: ast::Program, env: &mut Environment) -> Object {
-    eval_program(program, env)
+pub fn eval(node: ast::Node, env: &mut Environment) -> Object {
+    match node {
+        ast::Node::Program(it) => eval_program(it, env),
+        ast::Node::Statement(it) => eval_statement(it, env),
+        ast::Node::Expression(it) => eval_expression(it, env),
+    }
 }
 
 fn eval_program(program: ast::Program, env: &mut Environment) -> Object {
