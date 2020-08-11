@@ -14,7 +14,7 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn programe(self) -> Result<Program, String> {
+    pub fn program(self) -> Result<Program, String> {
         match self {
             Node::Program(it) => Ok(it),
             _ => Err("node is not Program".into()),
