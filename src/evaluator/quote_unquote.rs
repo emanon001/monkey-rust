@@ -1,15 +1,16 @@
 use crate::ast::{self};
-use crate::object::Object;
+use crate::evaluator::eval;
+use crate::object::{Environment, Object};
 
 pub type Error = String;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub fn quote(node: ast::Node) -> Result<Object> {
-    let node = eval_unquote_calls(node)?;
+pub fn quote(node: ast::Node, env: &mut Environment) -> Result<Object> {
+    let node = eval_unquote_calls(node, env)?;
     Ok(Object::Quote(node))
 }
 
-pub fn eval_unquote_calls(quoted: ast::Node) -> Result<ast::Node> {
+fn eval_unquote_calls(quoted: ast::Node, env: &mut Environment) -> Result<ast::Node> {
     ast::modify(quoted, |node| {
         if !is_unquote_call(&node) {
             return node;
@@ -20,8 +21,8 @@ pub fn eval_unquote_calls(quoted: ast::Node) -> Result<ast::Node> {
                     if args.len() != 1 {
                         return node;
                     }
-                    // TODO
-                    node
+                    let expr = args[0].clone();
+                    eval(expr.into(), env).into()
                 }
                 _ => node,
             },
@@ -43,9 +44,12 @@ fn is_unquote_call(node: &ast::Node) -> bool {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::ast::{Expression, Node, Statement};
-    use crate::evaluator::quote_unquote::quote;
-    use crate::object::Object;
+// Object -> AST Node
+impl std::convert::From<Object> for ast::Node {
+    fn from(obj: Object) -> ast::Node {
+        match obj {
+            Object::Integer(n) => ast::Expression::Integer(n).into(),
+            _ => ast::Expression::String("dummy".into()).into(),
+        }
+    }
 }

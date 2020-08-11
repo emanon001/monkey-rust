@@ -3,15 +3,15 @@ use crate::ast::*;
 pub type Error = String;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub fn modify<F: Fn(Node) -> Node>(node: Node, modifier: F) -> Result<Node> {
+pub fn modify<F: FnMut(Node) -> Node>(node: Node, mut modifier: F) -> Result<Node> {
     match node {
-        Node::Program(it) => Ok(modify_program(it, &modifier)?.into()),
-        Node::Statement(it) => Ok(modify_statement(it, &modifier)?.into()),
-        Node::Expression(it) => Ok(modify_expression(it, &modifier)?.into()),
+        Node::Program(it) => Ok(modify_program(it, &mut modifier)?.into()),
+        Node::Statement(it) => Ok(modify_statement(it, &mut modifier)?.into()),
+        Node::Expression(it) => Ok(modify_expression(it, &mut modifier)?.into()),
     }
 }
 
-fn modify_program<F: Fn(Node) -> Node>(prog: Program, modifier: &F) -> Result<Program> {
+fn modify_program<F: FnMut(Node) -> Node>(prog: Program, modifier: &mut F) -> Result<Program> {
     let mut statements = Vec::new();
     for stat in prog.statements {
         let stat = modify_statement(stat, modifier)?;
@@ -23,7 +23,10 @@ fn modify_program<F: Fn(Node) -> Node>(prog: Program, modifier: &F) -> Result<Pr
 
 // statements
 
-fn modify_statement<F: Fn(Node) -> Node>(stat: Statement, modifier: &F) -> Result<Statement> {
+fn modify_statement<F: FnMut(Node) -> Node>(
+    stat: Statement,
+    modifier: &mut F,
+) -> Result<Statement> {
     match stat {
         Statement::Let {
             identifier,
@@ -46,9 +49,9 @@ fn modify_statement<F: Fn(Node) -> Node>(stat: Statement, modifier: &F) -> Resul
     }
 }
 
-fn modify_block_statement<F: Fn(Node) -> Node>(
+fn modify_block_statement<F: FnMut(Node) -> Node>(
     block: BlockStatement,
-    modifier: &F,
+    modifier: &mut F,
 ) -> Result<BlockStatement> {
     let mut statements = Vec::new();
     for stat in block.statements {
@@ -61,7 +64,10 @@ fn modify_block_statement<F: Fn(Node) -> Node>(
 
 // expressions
 
-fn modify_expression<F: Fn(Node) -> Node>(expr: Expression, modifier: &F) -> Result<Expression> {
+fn modify_expression<F: FnMut(Node) -> Node>(
+    expr: Expression,
+    modifier: &mut F,
+) -> Result<Expression> {
     match expr {
         Expression::Array(ary) => {
             let mut elements = Vec::new();

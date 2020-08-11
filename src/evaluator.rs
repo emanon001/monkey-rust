@@ -335,7 +335,7 @@ fn eval_call_expression(
     if let ast::CallExpressionFunction::Identifier(id) = &f {
         if id.to_string() == "quote" {
             // TODO: check args len
-            return match quote(args[0].clone().into()) {
+            return match quote(args[0].clone().into(), env) {
                 Ok(quoted) => quoted,
                 Err(e) => new_error_object(&e),
             };
@@ -875,9 +875,26 @@ mod tests {
     #[test]
     fn eval_quote() {
         let tests = vec![
-            (r#"quote(5)"#, r#"5"#),
-            (r#"quote(foobar)"#, r#"foobar"#),
-            (r#"quote(foobar + barfoo)"#, r#"(foobar + barfoo)"#),
+            ("quote(5)", "5"),
+            ("quote(foobar)", "foobar"),
+            ("quote(foobar + barfoo)", "(foobar + barfoo)"),
+        ];
+        for (input, expected) in tests {
+            let v = test_eval(input.into());
+            match v {
+                Object::Quote(it) => assert_eq!(it.to_string(), expected),
+                _ => panic!("object is not quote. got={:?}", v),
+            }
+        }
+    }
+
+    #[test]
+    fn quote_unquote() {
+        let tests = vec![
+            ("quote(unquote(4))", "4"),
+            ("quote(unquote(4 + 4))", "8"),
+            ("quote(8 + unquote(4 + 4))", "(8 + 8)"),
+            ("quote(unquote(4 + 4) + 8)", "(8 + 8)"),
         ];
         for (input, expected) in tests {
             let v = test_eval(input.into());
@@ -945,7 +962,7 @@ mod tests {
         let lexer = Lexer::new(input);
         let mut env = Environment::new();
         match parse(lexer) {
-            Ok(p) => eval(p, &mut env),
+            Ok(node) => eval(node, &mut env),
             Err(e) => panic!(format!("{}", e)),
         }
     }
