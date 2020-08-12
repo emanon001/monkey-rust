@@ -30,6 +30,11 @@ pub enum Object {
     },
     Builtin(fn(Vec<Object>) -> Object),
     Quote(ast::Node),
+    Macro {
+        params: Vec<ast::Identifier>,
+        body: ast::BlockStatement,
+        env: Environment,
+    },
 }
 
 impl Object {
@@ -72,6 +77,10 @@ impl fmt::Display for Object {
             }
             Object::Builtin(_) => write!(f, "builtin"),
             Object::Quote(it) => write!(f, "quote({})", it),
+            Object::Macro { params, body, .. } => {
+                let params = params.iter().join(", ");
+                write!(f, "macro({}) {{\n{}\n}}", params, body)
+            }
         }
     }
 }
