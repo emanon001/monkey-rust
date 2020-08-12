@@ -1,9 +1,10 @@
 mod builtins;
-pub mod macro_expansion;
+mod macro_expansion;
 mod quote_unquote;
 use crate::ast::{self};
 use crate::evaluator::quote_unquote::quote;
 use crate::object::{Environment, HashKey, Object};
+pub use macro_expansion::{define_macros, expand_macros};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 

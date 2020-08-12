@@ -1,5 +1,4 @@
-use crate::evaluator::eval;
-use crate::evaluator::macro_expansion::{define_macros, expand_macros};
+use crate::evaluator::{define_macros, eval, expand_macros};
 use crate::lexer::Lexer;
 use crate::object::Environment;
 use crate::object::{self};

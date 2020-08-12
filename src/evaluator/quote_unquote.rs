@@ -1,4 +1,3 @@
-use crate::ast::modify::modify as ast_modify;
 use crate::ast::{self};
 use crate::evaluator::eval;
 use crate::object::{Environment, Object};
@@ -12,7 +11,7 @@ pub fn quote(node: ast::Node, env: &mut Environment) -> Result<Object> {
 }
 
 fn eval_unquote_calls(quoted: ast::Node, env: &mut Environment) -> Result<ast::Node> {
-    ast_modify(quoted, |node| match node {
+    ast::modify(quoted, |node| match node {
         ast::Node::Expression(expr) => match expr {
             ast::Expression::Unquote(expr) => {
                 let expr = *expr;

@@ -1,4 +1,3 @@
-use crate::ast::modify::modify as ast_modify;
 use crate::ast::{self};
 use crate::evaluator::eval;
 use crate::object::{Environment, Object};
@@ -39,7 +38,7 @@ fn add_macro(id: ast::Identifier, m: ast::MacroExpression, env: &mut Environment
 // expand_macros
 
 pub fn expand_macros(prog: ast::Program, env: &Environment) -> Result<ast::Program> {
-    let node = ast_modify(prog.into(), |node| match &node {
+    let node = ast::modify(prog.into(), |node| match &node {
         ast::Node::Expression(ast::Expression::Call {
             function: ast::CallExpressionFunction::Identifier(id),
             args,
