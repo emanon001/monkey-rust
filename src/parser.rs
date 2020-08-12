@@ -405,27 +405,6 @@ impl Parser {
         })
     }
 
-    fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
-        // ([<arg>, ...])
-        self.expect_current_token(Token::LParen)?;
-        if self.peek_token() == Some(&Token::RParen) {
-            self.next();
-            return Ok(Vec::new());
-        }
-        self.next();
-        let mut identifiers = Vec::new();
-        let ident = Self::parse_identifier(self.current_token())?;
-        identifiers.push(ident);
-        while self.peek_token().filter(|&t| t == &Token::Comma).is_some() {
-            self.next();
-            self.next();
-            let ident = Self::parse_identifier(self.current_token())?;
-            identifiers.push(ident);
-        }
-        self.expect_peek_token_and_next(Token::RParen)?;
-        Ok(identifiers)
-    }
-
     fn parse_quote_expression(&mut self) -> Result<ast::Expression> {
         // quote(<expr>)
 
@@ -450,25 +429,42 @@ impl Parser {
         Ok(ast::Expression::Unquote(expr.into()))
     }
 
-    fn parse_expression_list(&mut self, end: Token) -> Result<Vec<ast::Expression>> {
-        // <start>[<expr>, ...]<end>
+    fn parse_comma_separated_list<T, F: Fn(&mut Parser) -> Result<T>>(
+        &mut self,
+        end: Token,
+        parser: F,
+    ) -> Result<Vec<T>> {
+        // [<any>, ...]<end>
         if self.peek_token() == Some(&end) {
             self.next();
             return Ok(Vec::new());
         }
         self.next();
-        // <expr>, [<expr>, ...]
+        // <any>, [<any>, ...]
         let mut res = Vec::new();
-        res.push(self.parse_expression(Precedence::Lowest)?);
+        res.push(parser(self)?);
         while self.peek_token() == Some(&Token::Comma) {
             self.next();
             self.next();
-            res.push(self.parse_expression(Precedence::Lowest)?);
+            res.push(parser(self)?);
         }
         // <end>
         self.expect_peek_token_and_next(end)?;
 
         Ok(res)
+    }
+
+    fn parse_expression_list(&mut self, end: Token) -> Result<Vec<ast::Expression>> {
+        // [<expr>, ...]<end>
+        self.parse_comma_separated_list(end, |parser| parser.parse_expression(Precedence::Lowest))
+    }
+
+    fn parse_function_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
+        // ([<arg>, ...])
+        self.expect_current_token(Token::LParen)?;
+        self.parse_comma_separated_list(Token::RParen, |parser| {
+            Self::parse_identifier(parser.current_token())
+        })
     }
 
     fn current_prececence(&self) -> Precedence {
