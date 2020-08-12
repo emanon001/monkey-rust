@@ -1,6 +1,5 @@
-mod modify;
+pub mod modify;
 use itertools::Itertools;
-pub use modify::modify;
 use std::collections::BTreeMap;
 use std::fmt::{self};
 
@@ -348,9 +347,21 @@ pub enum CallExpressionFunction {
 impl fmt::Display for CallExpressionFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CallExpressionFunction::Identifier(id) => write!(f, "{}", id),
-            CallExpressionFunction::Function(func) => write!(f, "{}", func),
+            CallExpressionFunction::Identifier(it) => write!(f, "{}", it),
+            CallExpressionFunction::Function(it) => write!(f, "{}", it),
         }
+    }
+}
+
+impl std::convert::From<Identifier> for CallExpressionFunction {
+    fn from(id: Identifier) -> Self {
+        Self::Identifier(id)
+    }
+}
+
+impl std::convert::From<FunctionExpression> for CallExpressionFunction {
+    fn from(f: FunctionExpression) -> Self {
+        Self::Function(f)
     }
 }
 

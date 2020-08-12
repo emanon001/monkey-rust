@@ -382,9 +382,9 @@ impl Parser {
     }
 
     fn parse_call_expression(&mut self, function: ast::Expression) -> Result<ast::Expression> {
-        let function = match function {
-            ast::Expression::Identifier(id) => ast::CallExpressionFunction::Identifier(id),
-            ast::Expression::Function(func) => ast::CallExpressionFunction::Function(func),
+        let function: ast::CallExpressionFunction = match function {
+            ast::Expression::Identifier(id) => id.into(),
+            ast::Expression::Function(f) => f.into(),
             _ => {
                 return Err(
                     format!("could not parse {:?} as call expression function", function).into(),

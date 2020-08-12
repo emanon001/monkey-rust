@@ -1,5 +1,12 @@
+use crate::ast::modify::modify as ast_modify;
 use crate::ast::{self};
+use crate::evaluator::eval;
 use crate::object::{Environment, Object};
+
+pub type Error = String;
+pub type Result<T> = std::result::Result<T, Error>;
+
+// define_macros
 
 pub fn define_macros(prog: ast::Program, env: &mut Environment) -> ast::Program {
     let mut macro_excluded_statements = Vec::new();
@@ -29,9 +36,61 @@ fn add_macro(id: ast::Identifier, m: ast::MacroExpression, env: &mut Environment
     env.set(&id, m);
 }
 
+// expand_macros
+
+pub fn expand_macros(prog: ast::Program, env: &Environment) -> Result<ast::Program> {
+    let node = ast_modify(prog.into(), |node| match &node {
+        ast::Node::Expression(ast::Expression::Call {
+            function: ast::CallExpressionFunction::Identifier(id),
+            args,
+        }) => {
+            if let Some(Object::Macro {
+                params,
+                body,
+                env: macro_env,
+            }) = env.get(&id)
+            {
+                let args = quote_args(args.clone());
+                let mut eval_env =
+                    extend_macro_env(macro_env.clone(), params.clone(), args.clone());
+                let body = ast::Statement::from(body);
+                let evaluated = eval(body.into(), &mut eval_env);
+                if let Object::Quote(node) = evaluated {
+                    node
+                } else {
+                    // TODO
+                    panic!("we only support returning AST-nodes from macros");
+                }
+            } else {
+                node
+            }
+        }
+        _ => node,
+    })?;
+    node.program()
+}
+
+fn quote_args(args: Vec<ast::Expression>) -> Vec<Object> {
+    args.into_iter()
+        .map(|expr| Object::Quote(expr.into()))
+        .collect()
+}
+
+fn extend_macro_env(
+    env: Environment,
+    params: Vec<ast::Identifier>,
+    args: Vec<Object>,
+) -> Environment {
+    let mut env = Environment::new_with_outer(env);
+    for (param, arg) in params.into_iter().zip(args) {
+        env.set(&param, arg);
+    }
+    env
+}
+
 #[cfg(test)]
 mod tests {
-    use super::define_macros;
+    use super::{define_macros, expand_macros};
     use crate::ast;
     use crate::lexer::Lexer;
     use crate::object::{Environment, Object};
@@ -46,7 +105,7 @@ mod tests {
         "#;
 
         let mut env = Environment::new();
-        let program = test_parse(input.into());
+        let program = test_parse(input);
         let program = define_macros(program, &mut env);
 
         assert_eq!(program.statements.len(), 2);
@@ -65,10 +124,55 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_expand_macros() -> Result<(), String> {
+        let tests = vec![
+            (
+                r#"
+                let infixExpression = macro() { quote(1 + 2); };
+                infixExpression();
+                "#,
+                "(1 + 2)",
+            ),
+            (
+                r#"
+                let reverse = macro(a, b) { quote(unquote(b) - unquote(a)); };
+                reverse(2 + 2, 10 - 5);
+                "#,
+                "(10 - 5) - (2 + 2)",
+            ),
+            (
+                r#"
+                let unless = macro(condition, consequence, alternative) {
+                    quote(
+                        if (!(unquote(condition))) {
+                            unquote(consequence);
+                        } else {
+                            unquote(alternative);
+                        }
+                    );
+                };
+                unless(10 > 5, puts("not greater"), puts("greater"));
+                "#,
+                r#"if (!(10 > 5)) { puts("not greater") } else { puts("greater") }"#,
+            ),
+        ];
+
+        for (input, expected) in tests {
+            let expected = test_parse(expected);
+            let program = test_parse(input);
+            let mut env = Environment::new();
+            let program = define_macros(program, &mut env);
+            let expanded = expand_macros(program, &env)?;
+            assert_eq!(expanded.to_string(), expected.to_string());
+        }
+        Ok(())
+    }
+
     // helpers
 
-    fn test_parse(input: String) -> ast::Program {
-        let lexer = Lexer::new(input);
+    fn test_parse(input: &str) -> ast::Program {
+        let lexer = Lexer::new(input.into());
         parse(lexer).unwrap()
     }
 
