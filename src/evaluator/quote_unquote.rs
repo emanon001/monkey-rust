@@ -31,7 +31,7 @@ impl std::convert::From<Object> for ast::Node {
             Object::Integer(it) => ast::Expression::Integer(it).into(),
             Object::Boolean(it) => ast::Expression::Boolean(it).into(),
             Object::Quote(node) => node,
-            _ => ast::Expression::String("dummy".into()).into(),
+            _ => panic!("not implemented"),
         }
     }
 }
