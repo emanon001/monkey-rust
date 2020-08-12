@@ -1,4 +1,5 @@
 use crate::evaluator::eval;
+use crate::evaluator::macro_expansion::{define_macros, expand_macros};
 use crate::lexer::Lexer;
 use crate::object::Environment;
 use crate::object::{self};
@@ -25,16 +26,21 @@ impl Repl {
         write!(writer, "{}", self.prompt)?;
         writer.flush()?;
         let mut env = Environment::new();
+        let mut macro_env = Environment::new();
         for l in reader.lines() {
             let l = l?;
             let lexer = Lexer::new(l);
             match parse(lexer) {
                 Ok(prog) => {
-                    let evaluated = eval(prog.into(), &mut env);
-                    if let object::Object::Let = evaluated {
-                        // no output
-                    } else {
-                        write!(writer, "{}\n", evaluated)?;
+                    let prog = define_macros(prog, &mut macro_env);
+                    match expand_macros(prog, &macro_env) {
+                        Ok(expanded) => {
+                            let evaluated = eval(expanded.into(), &mut env);
+                            if object::Object::Let != evaluated {
+                                write!(writer, "{}\n", evaluated)?;
+                            }
+                        }
+                        Err(e) => write!(writer, "{}\n", e)?,
                     }
                 }
                 Err(parser::Errors(e)) => {
