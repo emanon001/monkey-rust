@@ -442,7 +442,7 @@ impl Parser {
         self.expect_peek_token_and_next(Token::LBrace)?;
         let body = self.parse_block_statement()?;
 
-        Ok(ast::Expression::Macro { params, body })
+        Ok(ast::MacroExpression { params, body }.into())
     }
 
     fn parse_comma_separated_list<T, F: Fn(&mut Parser) -> Result<T>>(
@@ -1062,7 +1062,8 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
-            ast::Expression::Macro { params, body } => {
+            ast::Expression::Macro(m) => {
+                let ast::MacroExpression { params, body } = m;
                 // parameters
                 assert_eq!(params.len(), 2);
                 test_identifier(&params[0], "x");

@@ -195,10 +195,7 @@ pub enum Expression {
     },
     Quote(Box<Expression>),
     Unquote(Box<Expression>),
-    Macro {
-        params: Vec<Identifier>,
-        body: BlockStatement,
-    },
+    Macro(MacroExpression),
 }
 
 impl fmt::Display for Expression {
@@ -245,10 +242,7 @@ impl fmt::Display for Expression {
             Expression::Index { left, index } => write!(f, "({}[{}])", left, index),
             Expression::Quote(expr) => write!(f, "quote({})", expr),
             Expression::Unquote(expr) => write!(f, "unquote({})", expr),
-            Expression::Macro { params, body } => {
-                let params = params.iter().join(", ");
-                write!(f, "macro({}) {}", params, body)
-            }
+            Expression::Macro(it) => write!(f, "{}", it),
         }
     }
 }
@@ -271,6 +265,12 @@ impl std::convert::From<CallExpressionFunction> for Expression {
             CallExpressionFunction::Identifier(id) => id.into(),
             CallExpressionFunction::Function(f) => f.into(),
         }
+    }
+}
+
+impl std::convert::From<MacroExpression> for Expression {
+    fn from(macro_: MacroExpression) -> Self {
+        Self::Macro(macro_)
     }
 }
 
@@ -333,7 +333,7 @@ pub struct FunctionExpression {
 impl fmt::Display for FunctionExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let params = self.params.iter().join(", ");
-        write!(f, "fn ({}) {}", params, self.body)
+        write!(f, "fn({}) {}", params, self.body)
     }
 }
 
@@ -351,5 +351,20 @@ impl fmt::Display for CallExpressionFunction {
             CallExpressionFunction::Identifier(id) => write!(f, "{}", id),
             CallExpressionFunction::Function(func) => write!(f, "{}", func),
         }
+    }
+}
+
+// MacroExpression
+
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+pub struct MacroExpression {
+    pub params: Vec<Identifier>,
+    pub body: BlockStatement,
+}
+
+impl fmt::Display for MacroExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let params = self.params.iter().join(", ");
+        write!(f, "macro({}) {}", params, self.body)
     }
 }
