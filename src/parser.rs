@@ -201,6 +201,7 @@ impl Parser {
             Some(Token::Function) => self.parse_function_expression(),
             Some(Token::Quote) => self.parse_quote_expression(),
             Some(Token::Unquote) => self.parse_unquote_expression(),
+            Some(Token::Macro) => self.parse_macro_expression(),
             t => Err(Self::new_parse_error("prefix expression", t).into()),
         }
     }
@@ -429,6 +430,21 @@ impl Parser {
         Ok(ast::Expression::Unquote(expr.into()))
     }
 
+    fn parse_macro_expression(&mut self) -> Result<ast::Expression> {
+        // macro(<arguments>) { <body> }
+
+        // macro(<arguments>)
+        self.expect_current_token(Token::Macro)?;
+        self.expect_peek_token_and_next(Token::LParen)?;
+        let params = self.parse_macro_parameters()?;
+
+        // { <body> }
+        self.expect_peek_token_and_next(Token::LBrace)?;
+        let body = self.parse_block_statement()?;
+
+        Ok(ast::Expression::Macro { params, body })
+    }
+
     fn parse_comma_separated_list<T, F: Fn(&mut Parser) -> Result<T>>(
         &mut self,
         end: Token,
@@ -465,6 +481,11 @@ impl Parser {
         self.parse_comma_separated_list(Token::RParen, |parser| {
             Self::parse_identifier(parser.current_token())
         })
+    }
+
+    fn parse_macro_parameters(&mut self) -> Result<Vec<ast::Identifier>> {
+        // ([<arg>, ...])
+        self.parse_function_parameters()
     }
 
     fn current_prececence(&self) -> Precedence {
@@ -940,7 +961,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_function_literal_expression() -> Result<()> {
+    fn parse_function_expression() -> Result<()> {
         let input = r#"
         fn(x, y) { x + y; }
         "#;
@@ -1027,6 +1048,39 @@ mod tests {
                 );
             }
             _ => panic!("expression is not array. got={:?}", expr),
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn parse_macro_expression() -> Result<()> {
+        let input = r#"
+        macro(x, y) { x + y; }
+        "#;
+        let lexer = Lexer::new(input.into());
+        let program = parse(lexer)?.program()?;
+        assert_eq!(program.statements.len(), 1);
+        let s = &program.statements[0];
+        parse_expression_statement(s, |expr| match expr {
+            ast::Expression::Macro { params, body } => {
+                // parameters
+                assert_eq!(params.len(), 2);
+                test_identifier(&params[0], "x");
+                test_identifier(&params[1], "y");
+                // body
+                assert_eq!(body.statements.len(), 1);
+                let s = &body.statements[0];
+                match s {
+                    ast::Statement::Expression(expr) => test_infix_expression(
+                        expr,
+                        ast::Expression::Identifier(ast::Identifier("x".into())),
+                        ast::InfixOperator::Add,
+                        ast::Expression::Identifier(ast::Identifier("y".into())),
+                    ),
+                    _ => panic!("statement not `<expr>`. got={:?}", s),
+                };
+            }
+            _ => panic!("expression not macro. got={:?}", expr),
         });
         Ok(())
     }
