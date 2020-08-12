@@ -131,6 +131,7 @@ fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
         ast::Expression::Unquote(_) => {
             new_error_object("`unquote` can only be used in `quote(...)`")
         }
+        ast::Expression::Macro { .. } => new_error_object("`macro` is not supported"),
     }
 }
 

@@ -195,6 +195,10 @@ pub enum Expression {
     },
     Quote(Box<Expression>),
     Unquote(Box<Expression>),
+    Macro {
+        params: Vec<Identifier>,
+        body: BlockStatement,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -241,6 +245,10 @@ impl fmt::Display for Expression {
             Expression::Index { left, index } => write!(f, "({}[{}])", left, index),
             Expression::Quote(expr) => write!(f, "quote({})", expr),
             Expression::Unquote(expr) => write!(f, "unquote({})", expr),
+            Expression::Macro { params, body } => {
+                let params = params.iter().join(", ");
+                write!(f, "macro({}) {}", params, body)
+            }
         }
     }
 }
