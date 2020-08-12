@@ -29,8 +29,8 @@ impl Repl {
             let l = l?;
             let lexer = Lexer::new(l);
             match parse(lexer) {
-                Ok(program) => {
-                    let evaluated = eval(program, &mut env);
+                Ok(prog) => {
+                    let evaluated = eval(prog.into(), &mut env);
                     if let object::Object::Let = evaluated {
                         // no output
                     } else {

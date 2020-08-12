@@ -4,7 +4,7 @@ use crate::token::Token;
 use itertools::Itertools;
 use std::collections::BTreeMap;
 
-pub fn parse(lexer: Lexer) -> std::result::Result<ast::Node, Errors> {
+pub fn parse(lexer: Lexer) -> std::result::Result<ast::Program, Errors> {
     let mut parser = Parser::new(lexer);
     parser.parse()
 }
@@ -69,7 +69,7 @@ impl Parser {
         self.lexer.peek()
     }
 
-    fn parse(&mut self) -> std::result::Result<ast::Node, Errors> {
+    fn parse(&mut self) -> std::result::Result<ast::Program, Errors> {
         let mut statements = Vec::new();
         let mut errors = Vec::new();
         while self.current_token().is_some() {
@@ -80,7 +80,7 @@ impl Parser {
             self.next();
         }
         if errors.is_empty() {
-            Ok(ast::Program { statements }.into())
+            Ok(ast::Program { statements })
         } else {
             Err(Errors(errors))
         }
@@ -576,7 +576,7 @@ mod tests {
         ];
         for (input, id, value) in cases {
             let lexer = Lexer::new(input.into());
-            let program = parse(lexer)?.program()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             test_let_statement(s, id, value);
@@ -601,7 +601,7 @@ mod tests {
         ];
         for (input, expression) in cases {
             let lexer = Lexer::new(input.into());
-            let program = parse(lexer)?.program()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             test_return_statement(s, expression);
@@ -616,7 +616,7 @@ mod tests {
         "#
         .into();
         let lexer = Lexer::new(input);
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| test_identifier_expression(expr, "foobar"));
@@ -630,7 +630,7 @@ mod tests {
         "#
         .into();
         let lexer = Lexer::new(input);
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| test_integer_expression(expr, 5));
@@ -647,7 +647,7 @@ mod tests {
         ];
         for (input, expected) in tests {
             let lexer = Lexer::new(input.into());
-            let program = parse(lexer)?.program()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             parse_expression_statement(s, |expr| match expr {
@@ -662,7 +662,7 @@ mod tests {
     fn parse_array_expression() -> Result<()> {
         let input = r#"[1, 2 * 2, 3 + 3]"#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -691,7 +691,7 @@ mod tests {
     fn parse_hash_string_key_expression() -> Result<()> {
         let input = r#"{"one": 1, "two": 2, "three": 3}"#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -710,7 +710,7 @@ mod tests {
     fn parse_empty_hash_expression() -> Result<()> {
         let input = r#"{}"#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -725,7 +725,7 @@ mod tests {
     fn parse_hash_expr_value_expression() -> Result<()> {
         let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -782,7 +782,7 @@ mod tests {
         ];
         for (input, op, r) in cases {
             let lexer = Lexer::new(input.into());
-            let program = parse(lexer)?.program()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             parse_expression_statement(s, |expr| match expr {
@@ -868,7 +868,7 @@ mod tests {
         ];
         for (input, l, op, r) in cases {
             let lexer = Lexer::new(input.into());
-            let program = parse(lexer)?.program()?;
+            let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
             parse_expression_statement(s, |expr| match expr {
@@ -887,7 +887,7 @@ mod tests {
         if (x < y) { x }
         "#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -922,7 +922,7 @@ mod tests {
         if (x < y) { x } else { y }
         "#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -966,7 +966,7 @@ mod tests {
         fn(x, y) { x + y; }
         "#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -999,7 +999,7 @@ mod tests {
         add(1, 2 * 3, 4 + 5);
         "#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -1034,7 +1034,7 @@ mod tests {
     fn parse_index_expression() -> Result<()> {
         let input = r#"myArray[1 + 1]"#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {
@@ -1058,7 +1058,7 @@ mod tests {
         macro(x, y) { x + y; }
         "#;
         let lexer = Lexer::new(input.into());
-        let program = parse(lexer)?.program()?;
+        let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
         parse_expression_statement(s, |expr| match expr {

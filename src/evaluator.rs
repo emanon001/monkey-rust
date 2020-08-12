@@ -998,7 +998,7 @@ mod tests {
         let lexer = Lexer::new(input);
         let mut env = Environment::new();
         match parse(lexer) {
-            Ok(node) => eval(node, &mut env),
+            Ok(prog) => eval(prog.into(), &mut env),
             Err(e) => panic!(format!("{}", e)),
         }
     }
