@@ -99,6 +99,7 @@ impl Lexer {
             "return" => Token::Return,
             "quote" => Token::Quote,
             "unquote" => Token::Unquote,
+            "macro" => Token::Macro,
             _ => Token::Identifier(ident),
         }
     }
@@ -375,6 +376,29 @@ mod tests {
         assert_eq!(iter.next(), Some(Token::Int("1".into())));
         assert_eq!(iter.next(), Some(Token::RParen));
         assert_eq!(iter.next(), Some(Token::RParen));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn define_macro() {
+        let input = r#"
+        macro(x, y) { x + y; };
+        "#;
+        let lexer = Lexer::new(input.into());
+        let mut iter = lexer.into_iter();
+        assert_eq!(iter.next(), Some(Token::Macro));
+        assert_eq!(iter.next(), Some(Token::LParen));
+        assert_eq!(iter.next(), Some(Token::Identifier("x".into())));
+        assert_eq!(iter.next(), Some(Token::Comma));
+        assert_eq!(iter.next(), Some(Token::Identifier("y".into())));
+        assert_eq!(iter.next(), Some(Token::RParen));
+        assert_eq!(iter.next(), Some(Token::LBrace));
+        assert_eq!(iter.next(), Some(Token::Identifier("x".into())));
+        assert_eq!(iter.next(), Some(Token::Plus));
+        assert_eq!(iter.next(), Some(Token::Identifier("y".into())));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
+        assert_eq!(iter.next(), Some(Token::RBrace));
+        assert_eq!(iter.next(), Some(Token::Semicolon));
         assert_eq!(iter.next(), None);
     }
 }

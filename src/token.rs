@@ -62,5 +62,7 @@ pub enum Token {
     Quote,
     /// unquote
     Unquote,
+    // macro
+    Macro,
     Illegal(String),
 }
