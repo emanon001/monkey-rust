@@ -4,8 +4,12 @@ use crate::object::{Environment, Object};
 pub fn define_macros(prog: ast::Program, env: &mut Environment) -> ast::Program {
     let mut macro_excluded_statements = Vec::new();
     for stmt in prog.statements {
-        if is_macro_definition(&stmt) {
-            add_macro(stmt, env);
+        if let ast::Statement::Let {
+            identifier,
+            expression: ast::Expression::Macro(m),
+        } = stmt
+        {
+            add_macro(identifier, m, env);
         } else {
             macro_excluded_statements.push(stmt);
         }
@@ -15,31 +19,14 @@ pub fn define_macros(prog: ast::Program, env: &mut Environment) -> ast::Program 
     }
 }
 
-fn is_macro_definition(stmt: &ast::Statement) -> bool {
-    if let ast::Statement::Let { expression, .. } = stmt {
-        if let ast::Expression::Macro { .. } = expression {
-            return true;
-        }
-    }
-    false
-}
-
-fn add_macro(stmt: ast::Statement, env: &mut Environment) {
-    if let ast::Statement::Let {
-        identifier,
-        expression,
-    } = stmt
-    {
-        if let ast::Expression::Macro(m) = expression {
-            let ast::MacroExpression { params, body } = m;
-            let m = Object::Macro {
-                params,
-                body,
-                env: env.clone(),
-            };
-            env.set(&identifier, m);
-        }
-    }
+fn add_macro(id: ast::Identifier, m: ast::MacroExpression, env: &mut Environment) {
+    let ast::MacroExpression { params, body } = m;
+    let m = Object::Macro {
+        params,
+        body,
+        env: env.clone(),
+    };
+    env.set(&id, m);
 }
 
 #[cfg(test)]
