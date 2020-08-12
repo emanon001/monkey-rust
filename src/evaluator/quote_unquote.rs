@@ -12,31 +12,16 @@ pub fn quote(node: ast::Node, env: &mut Environment) -> Result<Object> {
 }
 
 fn eval_unquote_calls(quoted: ast::Node, env: &mut Environment) -> Result<ast::Node> {
-    ast_modify(quoted, |node| {
-        if !is_unquote_call(&node) {
-            return node;
-        }
-        match node {
-            ast::Node::Expression(expr) => match expr {
-                ast::Expression::Unquote(expr) => {
-                    let expr = *expr;
-                    eval(expr.into(), env).into()
-                }
-                other => other.into(),
-            },
-            _ => node,
-        }
-    })
-}
-
-fn is_unquote_call(node: &ast::Node) -> bool {
-    match node {
+    ast_modify(quoted, |node| match node {
         ast::Node::Expression(expr) => match expr {
-            ast::Expression::Unquote(_) => true,
-            _ => false,
+            ast::Expression::Unquote(expr) => {
+                let expr = *expr;
+                eval(expr.into(), env).into()
+            }
+            other => other.into(),
         },
-        _ => false,
-    }
+        _ => node,
+    })
 }
 
 // Object -> AST Node
