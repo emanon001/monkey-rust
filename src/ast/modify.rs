@@ -13,7 +13,7 @@ pub fn modify<F: Modifier>(node: Node, mut modifier: F) -> Result<Node> {
     }
 }
 
-fn modify_program<F: FnMut(Node) -> Node>(prog: Program, modifier: &mut F) -> Result<Program> {
+fn modify_program<F: Modifier>(prog: Program, modifier: &mut F) -> Result<Program> {
     let mut statements = Vec::new();
     for stat in prog.statements {
         let stat = modify_statement(stat, modifier)?;
@@ -63,10 +63,7 @@ fn modify_block_statement<F: Modifier>(
 
 // expressions
 
-fn modify_expression<F: FnMut(Node) -> Node>(
-    expr: Expression,
-    modifier: &mut F,
-) -> Result<Expression> {
+fn modify_expression<F: Modifier>(expr: Expression, modifier: &mut F) -> Result<Expression> {
     match expr {
         Expression::Array(ary) => {
             let mut elements = Vec::new();
