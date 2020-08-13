@@ -3,7 +3,9 @@ use crate::ast::*;
 pub type Error = String;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub fn modify<F: FnMut(Node) -> Node>(node: Node, mut modifier: F) -> Result<Node> {
+pub trait Modifier = FnMut(Node) -> Node;
+
+pub fn modify<F: Modifier>(node: Node, mut modifier: F) -> Result<Node> {
     match node {
         Node::Program(it) => Ok(modify_program(it, &mut modifier)?.into()),
         Node::Statement(it) => Ok(modify_statement(it, &mut modifier)?.into()),
@@ -23,10 +25,7 @@ fn modify_program<F: FnMut(Node) -> Node>(prog: Program, modifier: &mut F) -> Re
 
 // statements
 
-fn modify_statement<F: FnMut(Node) -> Node>(
-    stat: Statement,
-    modifier: &mut F,
-) -> Result<Statement> {
+fn modify_statement<F: Modifier>(stat: Statement, modifier: &mut F) -> Result<Statement> {
     match stat {
         Statement::Let {
             identifier,
@@ -49,7 +48,7 @@ fn modify_statement<F: FnMut(Node) -> Node>(
     }
 }
 
-fn modify_block_statement<F: FnMut(Node) -> Node>(
+fn modify_block_statement<F: Modifier>(
     block: BlockStatement,
     modifier: &mut F,
 ) -> Result<BlockStatement> {
