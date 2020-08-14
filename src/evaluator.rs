@@ -339,15 +339,6 @@ fn eval_call_expression(
     args: Vec<ast::Expression>,
     env: &mut Environment,
 ) -> Object {
-    if let ast::CallExpressionFunction::Identifier(id) = &f {
-        if id.to_string() == "quote" {
-            // TODO: check args len
-            return match quote(args[0].clone().into(), env) {
-                Ok(quoted) => quoted,
-                Err(e) => new_error_object(&e),
-            };
-        }
-    }
     let f = eval_expression(f.into(), env);
     if f.is_error() {
         return f;
