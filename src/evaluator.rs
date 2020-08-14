@@ -18,6 +18,8 @@ pub fn eval(node: ast::Node, env: &mut Environment) -> Object {
     }
 }
 
+// eval program
+
 fn eval_program(program: ast::Program, env: &mut Environment) -> Object {
     let stmts = program.statements;
     let mut res = null_object();
@@ -35,6 +37,8 @@ fn eval_program(program: ast::Program, env: &mut Environment) -> Object {
     }
     res
 }
+
+// eval statements
 
 fn eval_statement(stmt: ast::Statement, env: &mut Environment) -> Object {
     match stmt {
@@ -77,11 +81,16 @@ fn eval_let_function_statement(
 ) -> Object {
     // let <id> = <function>
     // set <id> in `env` for recursive calls
-    let rf = eval_let_function_expression(id.clone(), f.clone(), env);
+    let lf = Object::LetFunction {
+        id: id.clone(),
+        params: f.params.clone(),
+        body: f.body.clone(),
+        env: env.clone(),
+    };
     let mut fenv = env.clone();
-    fenv.set(&id, rf);
+    fenv.set(&id, lf);
 
-    let f = eval_function_expression(f, &mut fenv);
+    let f = eval_expression(f.into(), &mut fenv);
     env.set(&id, f.clone());
     Object::Let
 }
@@ -104,6 +113,8 @@ fn eval_block_statement(block: ast::BlockStatement, env: &mut Environment) -> Ob
     }
     res
 }
+
+// eval expressions
 
 fn eval_expression(expr: ast::Expression, env: &mut Environment) -> Object {
     match expr {
@@ -293,9 +304,9 @@ fn eval_if_expression(
         return condition;
     }
     if is_truthy(condition) {
-        eval_block_statement(consequence, env)
+        eval_statement(consequence.into(), env)
     } else if let Some(alternative) = alternative {
-        eval_block_statement(alternative, env)
+        eval_statement(alternative.into(), env)
     } else {
         null_object()
     }
@@ -318,22 +329,6 @@ fn eval_function_expression(expr: ast::FunctionExpression, env: &Environment) ->
     Object::Function { params, body, env }
 }
 
-fn eval_let_function_expression(
-    id: ast::Identifier,
-    expr: ast::FunctionExpression,
-    env: &Environment,
-) -> Object {
-    let params = expr.params;
-    let body = expr.body;
-    let env = env.clone();
-    Object::LetFunction {
-        id,
-        params,
-        body,
-        env,
-    }
-}
-
 fn eval_call_expression(
     f: ast::CallExpressionFunction,
     args: Vec<ast::Expression>,
@@ -347,7 +342,7 @@ fn eval_call_expression(
         Ok(args) => match f {
             Object::Function { body, params, env } => {
                 let mut env = extend_function_env(env, params, args);
-                unwrap_return_value(eval_block_statement(body, &mut env))
+                unwrap_return_value(eval_statement(body.into(), &mut env))
             }
             Object::LetFunction {
                 id,
@@ -368,7 +363,7 @@ fn eval_call_expression(
                     },
                 );
                 let mut env = extend_function_env(env, params, args);
-                unwrap_return_value(eval_block_statement(body, &mut env))
+                unwrap_return_value(eval_statement(body.into(), &mut env))
             }
             Object::Builtin(f) => f(args),
             _ => new_error_object(&format!("not a function: `{}`", f)),
