@@ -6,8 +6,8 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(input: String) -> Self {
-        let input = input.chars().collect::<Vec<char>>();
+    pub fn new(input: impl Into<String>) -> Self {
+        let input = input.into().chars().collect::<Vec<char>>();
         Self { input, pos: 0 }
     }
 
@@ -87,7 +87,8 @@ impl Lexer {
         self.input[l..r].into_iter().collect::<String>()
     }
 
-    fn new_identifier_token(ident: String) -> Token {
+    fn new_identifier_token(ident: impl Into<String>) -> Token {
+        let ident: String = ident.into();
         let s: &str = &ident;
         match s {
             "fn" => Token::Function,
@@ -182,7 +183,7 @@ mod tests {
         };
         let result = add(five, ten);
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Let));
         assert_eq!(iter.next(), Some(Token::Identifier("five".into())));
@@ -226,7 +227,7 @@ mod tests {
         !-/*5;
         5 < 10 > 5;
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Bang));
         assert_eq!(iter.next(), Some(Token::Minus));
@@ -249,7 +250,7 @@ mod tests {
             return false;
         }
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::If));
         assert_eq!(iter.next(), Some(Token::LParen));
@@ -274,7 +275,7 @@ mod tests {
         10 == 10;
         10 != 9;
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Int("10".into())));
         assert_eq!(iter.next(), Some(Token::Eq));
@@ -292,7 +293,7 @@ mod tests {
         let input = r#"
         foo + bar
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Identifier("foo".into())));
         assert_eq!(iter.next(), Some(Token::Plus));
@@ -305,7 +306,7 @@ mod tests {
         let input = r#"
         1 + 2
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Int("1".into())));
         assert_eq!(iter.next(), Some(Token::Plus));
@@ -320,7 +321,7 @@ mod tests {
         "foo bar"
         ""
         "foo bar"#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::String("foobar".into())));
         assert_eq!(iter.next(), Some(Token::String("foo bar".into())));
@@ -334,7 +335,7 @@ mod tests {
         let input = r#"
         [1, 2];
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::LBracket));
         assert_eq!(iter.next(), Some(Token::Int("1".into())));
@@ -350,7 +351,7 @@ mod tests {
         let input = r#"
         {"foo": "bar"}
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::LBrace));
         assert_eq!(iter.next(), Some(Token::String("foo".into())));
@@ -365,7 +366,7 @@ mod tests {
         let input = r#"
         quote(unquote(1 + 1))
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Quote));
         assert_eq!(iter.next(), Some(Token::LParen));
@@ -384,7 +385,7 @@ mod tests {
         let input = r#"
         macro(x, y) { x + y; };
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let mut iter = lexer.into_iter();
         assert_eq!(iter.next(), Some(Token::Macro));
         assert_eq!(iter.next(), Some(Token::LParen));

@@ -199,7 +199,7 @@ fn eval_hash_expression(
         }
         let key = match HashKey::try_from(key) {
             Ok(it) => it,
-            Err((_, o)) => return new_error_object(&format!("unusable as hash key: `{}`", o)),
+            Err((_, o)) => return new_error_object(format!("unusable as hash key: `{}`", o)),
         };
         let value = eval_expression(v, env);
         if value.is_error() {
@@ -236,7 +236,7 @@ fn eval_bang_prefix_operator_expression(right: Object) -> Object {
 fn eval_minus_prefix_operator_expression(right: Object) -> Object {
     match right {
         Object::Integer(n) => Object::Integer(-n).into(),
-        r => new_error_object(&format!("unknown operator: `-{}`", r)),
+        r => new_error_object(format!("unknown operator: `-{}`", r)),
     }
 }
 
@@ -259,7 +259,7 @@ fn eval_infix_expression(
         (Object::Integer(l), Object::Integer(r)) => eval_integer_infix_expression(op, l, r),
         (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix_expression(op, l, r),
         (Object::String(l), Object::String(r)) => eval_string_infix_expression(op, l, r),
-        (l, r) => new_error_object(&format!("unknown operator: `{} {} {}`", l, op, r)),
+        (l, r) => new_error_object(format!("unknown operator: `{} {} {}`", l, op, r)),
     }
 }
 
@@ -280,7 +280,7 @@ fn eval_boolean_infix_expression(op: ast::InfixOperator, left: bool, right: bool
     match op {
         ast::InfixOperator::Eq => Object::Boolean(left == right),
         ast::InfixOperator::NotEq => Object::Boolean(left != right),
-        _ => new_error_object(&format!("unknown operator: `{} {} {}`", left, op, right)),
+        _ => new_error_object(format!("unknown operator: `{} {} {}`", left, op, right)),
     }
 }
 
@@ -289,7 +289,7 @@ fn eval_string_infix_expression(op: ast::InfixOperator, left: String, right: Str
         ast::InfixOperator::Add => Object::String(left + &right),
         ast::InfixOperator::Eq => Object::Boolean(left == right),
         ast::InfixOperator::NotEq => Object::Boolean(left != right),
-        _ => new_error_object(&format!("unknown operator: `{} {} {}`", left, op, right)),
+        _ => new_error_object(format!("unknown operator: `{} {} {}`", left, op, right)),
     }
 }
 
@@ -318,7 +318,7 @@ fn eval_identifier_expression(id: ast::Identifier, env: &Environment) -> Object 
     } else if let Some(f) = builtins::get(&id) {
         Object::Builtin(f)
     } else {
-        new_error_object(&format!("identifier not found: `{}`", id))
+        new_error_object(format!("identifier not found: `{}`", id))
     }
 }
 
@@ -366,7 +366,7 @@ fn eval_call_expression(
                 unwrap_return_value(eval_statement(body.into(), &mut env))
             }
             Object::Builtin(f) => f(args),
-            _ => new_error_object(&format!("not a function: `{}`", f)),
+            _ => new_error_object(format!("not a function: `{}`", f)),
         },
         Err(v) => v,
     }
@@ -400,7 +400,7 @@ fn eval_index_expression(
     match (left, index) {
         (Object::Array(array), Object::Integer(idx)) => eval_array_index_expression(array, idx),
         (Object::Hash(hash), idx) => eval_hash_index_expression(hash, idx),
-        (l, _) => new_error_object(&format!("index operator not supported: `{}`", l)),
+        (l, _) => new_error_object(format!("index operator not supported: `{}`", l)),
     }
 }
 
@@ -415,7 +415,7 @@ fn eval_array_index_expression(array: Vec<Object>, idx: i64) -> Object {
 fn eval_hash_index_expression(hash: HashMap<HashKey, Object>, idx: Object) -> Object {
     let idx = match HashKey::try_from(idx) {
         Ok(it) => it,
-        Err((_, o)) => return new_error_object(&format!("unusable as hash key: `{}`", o)),
+        Err((_, o)) => return new_error_object(format!("unusable as hash key: `{}`", o)),
     };
     hash.get(&idx).cloned().unwrap_or(null_object())
 }
@@ -454,7 +454,7 @@ fn null_object() -> Object {
     Object::Null
 }
 
-fn new_error_object(s: &str) -> Object {
+fn new_error_object(s: impl Into<String>) -> Object {
     Object::Error(s.into())
 }
 
@@ -486,7 +486,7 @@ mod tests {
             ("(5 + 10 * 2 + 15 / 3) * 2 + -10", 50),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, Object::Integer(expected));
         }
     }
@@ -519,7 +519,7 @@ mod tests {
             (r#""" == """#, true),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, Object::Boolean(expected));
         }
     }
@@ -532,7 +532,7 @@ mod tests {
             (r#""""#, ""),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, Object::String(expected.into()));
         }
     }
@@ -545,7 +545,7 @@ mod tests {
             (r#""" + "World!""#, "World!"),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, Object::String(expected.into()));
         }
     }
@@ -555,7 +555,7 @@ mod tests {
         let input = r#"
         [1, 2 * 2, 3 + 3]
         "#;
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         assert_eq!(
             v,
             Object::Array(vec![
@@ -585,7 +585,7 @@ mod tests {
             ("[1, 2, 3][-1]", Object::Null),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -613,7 +613,7 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         assert_eq!(v, Object::Hash(expected));
     }
 
@@ -629,7 +629,7 @@ mod tests {
             (r#"{false: 5}[false]"#, new_int(5)),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -645,7 +645,7 @@ mod tests {
             ("!!5", true),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, Object::Boolean(expected));
         }
     }
@@ -662,7 +662,7 @@ mod tests {
             ("if (1 < 2) { 10 } else { 20 }", Object::Integer(10)),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -688,7 +688,7 @@ mod tests {
             ),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected.into());
         }
     }
@@ -719,7 +719,7 @@ mod tests {
             ("foobar", "identifier not found: `foobar`"),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, Object::Error(expected.into()));
         }
     }
@@ -736,7 +736,7 @@ mod tests {
             ),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -751,7 +751,7 @@ mod tests {
             ),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -763,7 +763,7 @@ mod tests {
             x + 2;
         };
         "#;
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         match v {
             Object::Function { params, body, .. } => {
                 // params
@@ -813,7 +813,7 @@ mod tests {
             ("fn(x) { x; }(5);", Object::Integer(5)),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -833,7 +833,7 @@ mod tests {
             ),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             assert_eq!(v, expected);
         }
     }
@@ -850,7 +850,7 @@ mod tests {
         };
         factorial(10);
         "#;
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         assert_eq!(v, Object::Integer(3628800));
     }
 
@@ -868,7 +868,7 @@ mod tests {
         let f = 1;
         g(10);
         "#;
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         assert_eq!(v, Object::Integer(3628800));
     }
 
@@ -880,7 +880,7 @@ mod tests {
             ("quote(foobar + barfoo)", "(foobar + barfoo)"),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             match v {
                 Object::Quote(it) => assert_eq!(it.to_string(), expected),
                 _ => panic!("object is not quote. got={:?}", v),
@@ -921,7 +921,7 @@ mod tests {
             ),
         ];
         for (input, expected) in tests {
-            let v = test_eval(input.into());
+            let v = test_eval(input);
             match v {
                 Object::Quote(it) => assert_eq!(it.to_string(), expected),
                 _ => panic!("object is not quote. got={:?}", v),
@@ -946,7 +946,7 @@ mod tests {
         let double = fn(x) { x * 2 };
         map(a, double);
         "#;
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         assert_eq!(
             v,
             Object::Array(vec![
@@ -976,13 +976,13 @@ mod tests {
         };
         sum([1, 2, 3, 4, 5]);
         "#;
-        let v = test_eval(input.into());
+        let v = test_eval(input);
         assert_eq!(v, Object::Integer(15));
     }
 
     // helpers
 
-    fn test_eval(input: String) -> Object {
+    fn test_eval(input: impl Into<String>) -> Object {
         let lexer = Lexer::new(input);
         let mut env = Environment::new();
         match parse(lexer) {

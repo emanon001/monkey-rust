@@ -501,7 +501,7 @@ impl Parser {
             Ok(())
         } else {
             let s = format!("{:?}", expected);
-            Err(Self::new_token_error(&s, self.peek_token()).into())
+            Err(Self::new_token_error(s, self.peek_token()).into())
         }
     }
 
@@ -510,7 +510,7 @@ impl Parser {
             Ok(())
         } else {
             let s = format!("{:?}", expected);
-            Err(Self::new_token_error(&s, self.peek_token()).into())
+            Err(Self::new_token_error(s, self.peek_token()).into())
         }
     }
 
@@ -539,20 +539,24 @@ impl Parser {
         }
     }
 
-    fn new_token_error(expected: &str, actual: Option<&Token>) -> String {
+    fn new_token_error(expected: impl Into<String>, actual: Option<&Token>) -> String {
         let actual = match actual {
             Some(t) => format!("{:?}", t),
             _ => "EOF".into(),
         };
-        format!("expected token to be {}, got {} instead", expected, actual)
+        format!(
+            "expected token to be {}, got {} instead",
+            expected.into(),
+            actual
+        )
     }
 
-    fn new_parse_error(expected: &str, actual: Option<&Token>) -> String {
+    fn new_parse_error(expected: impl Into<String>, actual: Option<&Token>) -> String {
         let actual = match actual {
             Some(t) => format!("{:?}", t),
             _ => "EOF".into(),
         };
-        format!("could not parse {} as {}", actual, expected)
+        format!("could not parse {} as {}", actual, expected.into())
     }
 }
 
@@ -575,7 +579,7 @@ mod tests {
             ),
         ];
         for (input, id, value) in cases {
-            let lexer = Lexer::new(input.into());
+            let lexer = Lexer::new(input);
             let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
@@ -600,7 +604,7 @@ mod tests {
             ),
         ];
         for (input, expression) in cases {
-            let lexer = Lexer::new(input.into());
+            let lexer = Lexer::new(input);
             let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
@@ -613,8 +617,7 @@ mod tests {
     fn parse_identifier_expression() -> Result<()> {
         let input = r#"
         foobar;
-        "#
-        .into();
+        "#;
         let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
@@ -627,8 +630,7 @@ mod tests {
     fn parse_integer_expression() -> Result<()> {
         let input = r#"
         5;
-        "#
-        .into();
+        "#;
         let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
@@ -646,7 +648,7 @@ mod tests {
             (r#""""#, ""),
         ];
         for (input, expected) in tests {
-            let lexer = Lexer::new(input.into());
+            let lexer = Lexer::new(input);
             let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
@@ -661,7 +663,7 @@ mod tests {
     #[test]
     fn parse_array_expression() -> Result<()> {
         let input = r#"[1, 2 * 2, 3 + 3]"#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -690,7 +692,7 @@ mod tests {
     #[test]
     fn parse_hash_string_key_expression() -> Result<()> {
         let input = r#"{"one": 1, "two": 2, "three": 3}"#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -709,7 +711,7 @@ mod tests {
     #[test]
     fn parse_empty_hash_expression() -> Result<()> {
         let input = r#"{}"#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -724,7 +726,7 @@ mod tests {
     #[test]
     fn parse_hash_expr_value_expression() -> Result<()> {
         let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -781,7 +783,7 @@ mod tests {
             ),
         ];
         for (input, op, r) in cases {
-            let lexer = Lexer::new(input.into());
+            let lexer = Lexer::new(input);
             let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
@@ -867,7 +869,7 @@ mod tests {
             ),
         ];
         for (input, l, op, r) in cases {
-            let lexer = Lexer::new(input.into());
+            let lexer = Lexer::new(input);
             let program = parse(lexer)?;
             assert_eq!(program.statements.len(), 1);
             let s = &program.statements[0];
@@ -886,7 +888,7 @@ mod tests {
         let input = r#"
         if (x < y) { x }
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -921,7 +923,7 @@ mod tests {
         let input = r#"
         if (x < y) { x } else { y }
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -965,7 +967,7 @@ mod tests {
         let input = r#"
         fn(x, y) { x + y; }
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -998,7 +1000,7 @@ mod tests {
         let input = r#"
         add(1, 2 * 3, 4 + 5);
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -1033,7 +1035,7 @@ mod tests {
     #[test]
     fn parse_index_expression() -> Result<()> {
         let input = r#"myArray[1 + 1]"#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -1057,7 +1059,7 @@ mod tests {
         let input = r#"
         macro(x, y) { x + y; }
         "#;
-        let lexer = Lexer::new(input.into());
+        let lexer = Lexer::new(input);
         let program = parse(lexer)?;
         assert_eq!(program.statements.len(), 1);
         let s = &program.statements[0];
@@ -1133,7 +1135,7 @@ mod tests {
             ),
         ];
         for (input, expected) in cases {
-            let lexer = Lexer::new(input.into());
+            let lexer = Lexer::new(input);
             let program = parse(lexer)?;
             let s = format!("{}", program);
             assert_eq!(s, expected);
@@ -1165,7 +1167,7 @@ mod tests {
         };
     }
 
-    fn test_let_statement(s: &ast::Statement, id: &str, value: ast::Expression) {
+    fn test_let_statement(s: &ast::Statement, id: impl Into<String>, value: ast::Expression) {
         match s {
             ast::Statement::Let {
                 identifier,
@@ -1185,7 +1187,7 @@ mod tests {
         };
     }
 
-    fn test_identifier_expression(expr: &ast::Expression, name: &str) {
+    fn test_identifier_expression(expr: &ast::Expression, name: impl Into<String>) {
         match expr {
             ast::Expression::Identifier(id) => {
                 test_identifier(id, name);
@@ -1194,8 +1196,9 @@ mod tests {
         };
     }
 
-    fn test_identifier(id: &ast::Identifier, name: &str) {
-        let s = &id.0;
+    fn test_identifier(id: &ast::Identifier, name: impl Into<String>) {
+        let s = id.0.to_string();
+        let name = name.into();
         assert_eq!(s, name, "identifier not {}. got={}", s, name);
     }
 
@@ -1249,7 +1252,7 @@ mod tests {
         ast::Expression::Integer(n)
     }
 
-    fn new_string_expr(s: &str) -> ast::Expression {
+    fn new_string_expr(s: impl Into<String>) -> ast::Expression {
         ast::Expression::String(s.into())
     }
 }

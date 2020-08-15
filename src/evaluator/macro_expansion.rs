@@ -170,12 +170,12 @@ mod tests {
 
     // helpers
 
-    fn test_parse(input: &str) -> ast::Program {
-        let lexer = Lexer::new(input.into());
+    fn test_parse(input: impl Into<String>) -> ast::Program {
+        let lexer = Lexer::new(input);
         parse(lexer).unwrap()
     }
 
-    fn new_id(id: &str) -> ast::Identifier {
-        id.into()
+    fn new_id(id: impl Into<String>) -> ast::Identifier {
+        id.into().into()
     }
 }

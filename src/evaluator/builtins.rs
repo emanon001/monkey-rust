@@ -113,10 +113,11 @@ fn new_wrong_number_arguments_error(n: usize, expected: usize) -> Object {
     ))
 }
 
-fn new_not_supported_error(fname: &str, o: &Object) -> Object {
+fn new_not_supported_error(fname: impl Into<String>, o: &Object) -> Object {
     Object::Error(format!(
         "argument to `{}` not supported, got `{}`",
-        fname, o
+        fname.into(),
+        o
     ))
 }
 

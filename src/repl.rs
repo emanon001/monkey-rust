@@ -11,8 +11,10 @@ pub struct Repl {
 }
 
 impl Repl {
-    pub fn new(prompt: String) -> Self {
-        Self { prompt }
+    pub fn new(prompt: impl Into<String>) -> Self {
+        Self {
+            prompt: prompt.into(),
+        }
     }
 
     pub fn start<R, W>(&self, reader: R, writer: W) -> Result<(), Box<dyn std::error::Error>>
