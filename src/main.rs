@@ -1,4 +1,4 @@
-use rmonkey::repl::Repl;
+use monkey::repl::Repl;
 use std::io::{self};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
