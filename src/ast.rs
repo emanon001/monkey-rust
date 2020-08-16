@@ -55,8 +55,8 @@ impl std::convert::From<Program> for Node {
 }
 
 impl std::convert::From<Statement> for Node {
-    fn from(stat: Statement) -> Self {
-        Self::Statement(stat)
+    fn from(stmt: Statement) -> Self {
+        Self::Statement(stmt)
     }
 }
 

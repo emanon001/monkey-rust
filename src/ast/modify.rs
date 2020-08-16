@@ -15,9 +15,9 @@ pub fn modify<F: Modifier>(node: Node, mut modifier: F) -> Result<Node> {
 
 fn modify_program<F: Modifier>(prog: Program, modifier: &mut F) -> Result<Program> {
     let mut statements = Vec::new();
-    for stat in prog.statements {
-        let stat = modify_statement(stat, modifier)?;
-        statements.push(stat);
+    for stmt in prog.statements {
+        let stmt = modify_statement(stmt, modifier)?;
+        statements.push(stmt);
     }
     let prog = Program { statements };
     Ok(prog)
@@ -25,8 +25,8 @@ fn modify_program<F: Modifier>(prog: Program, modifier: &mut F) -> Result<Progra
 
 // statements
 
-fn modify_statement<F: Modifier>(stat: Statement, modifier: &mut F) -> Result<Statement> {
-    match stat {
+fn modify_statement<F: Modifier>(stmt: Statement, modifier: &mut F) -> Result<Statement> {
+    match stmt {
         Statement::Let {
             identifier,
             expression,
@@ -53,9 +53,9 @@ fn modify_block_statement<F: Modifier>(
     modifier: &mut F,
 ) -> Result<BlockStatement> {
     let mut statements = Vec::new();
-    for stat in block.statements {
-        let stat = modify_statement(stat, modifier)?;
-        statements.push(stat);
+    for stmt in block.statements {
+        let stmt = modify_statement(stmt, modifier)?;
+        statements.push(stmt);
     }
     let block = BlockStatement { statements };
     Ok(block.into())
