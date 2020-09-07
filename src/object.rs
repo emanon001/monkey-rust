@@ -44,43 +44,51 @@ impl Object {
             _ => false,
         }
     }
-}
 
-impl fmt::Display for Object {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn inspect(&self) -> String {
         match self {
-            Object::Integer(it) => write!(f, "{}", it),
-            Object::Boolean(it) => write!(f, "{}", it),
-            Object::String(it) => write!(f, r#""{}""#, it),
+            Object::Integer(it) => format!("{}", it),
+            Object::Boolean(it) => format!("{}", it),
+            Object::String(it) => format!(r#""{}""#, it),
             Object::Array(it) => {
-                let s = it.iter().join(", ");
-                write!(f, "[{}]", s)
+                let s = it.iter().map(Object::inspect).join(", ");
+                format!("[{}]", s)
             }
             Object::Hash(it) => {
                 let s = it
                     .into_iter()
-                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .map(|(k, v)| format!("{}: {}", k, v.inspect()))
                     .join(", ");
-                write!(f, "{{{}}}", s)
+                format!("{{{}}}", s)
             }
-            Object::Null => write!(f, "null"),
-            Object::Return(it) => write!(f, "{}", it),
-            Object::Error(it) => write!(f, "{}", it),
-            Object::Let => write!(f, ""),
+            Object::Null => "null".into(),
+            Object::Return(it) => format!("{}", it),
+            Object::Error(it) => format!("{}", it),
+            Object::Let => "".into(),
             Object::Function { params, body, .. } => {
                 let params = params.iter().join(", ");
-                write!(f, "fn({}) {{\n{}\n}}", params, body)
+                format!("fn({}) {{\n{}\n}}", params, body)
             }
             Object::LetFunction { params, body, .. } => {
                 let params = params.iter().join(", ");
-                write!(f, "fn({}) {{\n{}\n}}", params, body)
+                format!("fn({}) {{\n{}\n}}", params, body)
             }
-            Object::Builtin(_) => write!(f, "builtin"),
-            Object::Quote(it) => write!(f, "quote({})", it),
+            Object::Builtin(_) => "builtin".into(),
+            Object::Quote(it) => format!("quote({})", it),
             Object::Macro { params, body, .. } => {
                 let params = params.iter().join(", ");
-                write!(f, "macro({}) {{\n{}\n}}", params, body)
+                format!("macro({}) {{\n{}\n}}", params, body)
             }
+        }
+    }
+}
+
+// for `builtins::puts`
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Object::String(it) => write!(f, "{}", it),
+            otherwise => write!(f, "{}", otherwise.inspect()),
         }
     }
 }

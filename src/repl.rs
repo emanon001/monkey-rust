@@ -38,7 +38,7 @@ impl Repl {
                         Ok(expanded) => {
                             let evaluated = eval(expanded.into(), &mut env);
                             if object::Object::Let != evaluated {
-                                write!(writer, "{}\n", evaluated)?;
+                                write!(writer, "{}\n", evaluated.inspect())?;
                             }
                         }
                         Err(e) => write!(writer, "{}\n", e)?,
