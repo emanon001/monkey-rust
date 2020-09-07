@@ -62,7 +62,7 @@ impl Object {
                 format!("{{{}}}", s)
             }
             Object::Null => "null".into(),
-            Object::Return(it) => format!("{}", it),
+            Object::Return(it) => format!("{}", it.inspect()),
             Object::Error(it) => format!("{}", it),
             Object::Let => "".into(),
             Object::Function { params, body, .. } => {
