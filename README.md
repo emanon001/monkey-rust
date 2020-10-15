@@ -12,6 +12,6 @@ $ cargo install --git https://github.com/emanon001/monkey-rust
 
 ```shell
 $ monkey
-> 1 + 2
+>> 1 + 2
 3
 ```
